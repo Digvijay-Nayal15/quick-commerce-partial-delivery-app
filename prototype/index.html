@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rider Partial Delivery Prototype</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%2385328C%22/%3E%3Cpath d=%22M9 11h14L10 22h13%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E">
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/zippee-rider-ds-10244fcc-4a9d-47bb-b79d-9c32adbdbaee/styles.css">
+<script src="_ds/zippee-rider-ds-10244fcc-4a9d-47bb-b79d-9c32adbdbaee/_ds_bundle.js"></script>
+<style>
+html, body { margin: 0; padding: 0; background: #ECE8EF; }
+a { color: #85328C; }
+a:hover { color: #6C2873; }
+.zds-qr__ring { display: none; }
+@media (max-width: 440px) { .zp-phone { width: 100% !important; height: 88vh !important; height: 88dvh !important; min-height: 640px; border-radius: 18px !important; } }
+@keyframes zpSpin { to { transform: rotate(360deg); } }
+@keyframes zpPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes zpSheetIn { from { transform: translateY(28px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes zpToastIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 16px 44px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <a href="../" style="align-self:center;font-size:13px;font-weight:600;text-decoration:none;">← Back to the case study</a>
+  <div style="font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#7A6F80;text-align:center;">Zippee Rider App · Partial Delivery &amp; Partial Payment · S1–S7</div>
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:760px;">
+    <sc-for list="{{ flowChips }}" as="chip" hint-placeholder-count="9">
+      <div style="font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;background:{{ chip.bg }};color:{{ chip.fg }};border:1px solid {{ chip.bd }};">{{ chip.label }}</div>
+    </sc-for>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;max-width:760px;">
+    <span style="font-size:11px;font-weight:700;color:#7A6F80;text-transform:uppercase;letter-spacing:0.06em;">Scenario</span>
+    <sc-for list="{{ scenarios }}" as="sc" hint-placeholder-count="6">
+      <a href="{{ sc.href }}" style="font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;text-decoration:none;background:{{ sc.bg }};color:{{ sc.fg }};border:1px solid {{ sc.bd }};">{{ sc.label }}</a>
+    </sc-for>
+  </div>
+
+  <div class="zds-root zp-phone" style="width:390px;height:844px;border-radius:26px;overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 28px 70px rgba(48,22,56,0.28), 0 0 0 1px rgba(48,22,56,0.08);background:var(--surface-50);">
+
+    <!-- ══════════ HOME ══════════ -->
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Home" style="display:flex;flex-direction:column;height:100%;">
+        <div style="background:var(--surface-0);border-bottom:1px solid var(--line-300);padding:12px 16px;display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;">
+            <div style="font:var(--text-h2);color:var(--zip-purple-600);">zippee</div>
+            <div style="font:var(--text-micro);color:var(--ink-600);">Delivery Partner · Saket zone</div>
+          </div>
+          <sc-if value="{{ showBagBadge }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="ZippeeRiderDS.BagBadge" dc-props="{{ bagBadgeProps }}" hint-size="auto,36px"></x-import>
+          </sc-if>
+          <x-import component-from-global-scope="ZippeeRiderDS.CashChip" dc-props="{{ cashChipProps }}" hint-size="auto,36px"></x-import>
+        </div>
+        <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.Banner" variant="offline" hint-size="100%,40px">{{ t.offlineBanner }}</x-import>
+        </sc-if>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <sc-if value="{{ hasDraft }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="ZippeeRiderDS.ResumeCard" dc-props="{{ resumeProps }}" hint-size="100%,88px"></x-import>
+          </sc-if>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;font:var(--text-label);color:var(--ink-600);text-transform:uppercase;letter-spacing:0.04em;">{{ routeLabel }}</div>
+            <div style="display:flex;gap:2px;background:var(--surface-0);border:1px solid var(--line-300);border-radius:999px;padding:3px;">
+              <div onClick="{{ setLangEn }}" style="cursor:pointer;font:var(--text-micro);font-weight:700;padding:4px 10px;border-radius:999px;background:{{ langEnBg }};color:{{ langEnFg }};">English</div>
+              <div onClick="{{ setLangHi }}" style="cursor:pointer;font:var(--text-micro);font-weight:700;padding:4px 10px;border-radius:999px;background:{{ langHiBg }};color:{{ langHiFg }};">Hinglish</div>
+            </div>
+          </div>
+          <sc-if value="{{ showPodTask }}" hint-placeholder-val="{{ true }}">
+            <x-import component-from-global-scope="ZippeeRiderDS.TaskCard" dc-props="{{ podTaskProps }}" hint-size="100%,96px"></x-import>
+          </sc-if>
+          <sc-if value="{{ showPrepaidTask }}" hint-placeholder-val="{{ true }}">
+            <x-import component-from-global-scope="ZippeeRiderDS.TaskCard" dc-props="{{ prepaidTaskProps }}" hint-size="100%,96px"></x-import>
+          </sc-if>
+          <sc-if value="{{ showReturnTask }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="ZippeeRiderDS.TaskCard" dc-props="{{ returnTaskProps }}" hint-size="100%,96px"></x-import>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ S1 · TASK ══════════ -->
+    <sc-if value="{{ isS1 }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="S1 Task" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarS1 }}" hint-size="100%,48px"></x-import>
+        <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.Banner" variant="offline" hint-size="100%,40px">{{ t.offlineBanner }}</x-import>
+        </sc-if>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font:var(--text-h1);color:var(--ink-900);">{{ t.doorTitle }}</div>
+
+          <sc-if value="{{ geoOk }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;background:var(--success-50);color:var(--success-700);border-radius:12px;padding:10px 12px;font:var(--text-label);">
+              <span style="width:8px;height:8px;border-radius:50%;background:var(--success-600);flex-shrink:0;"></span>{{ t.geoOk }}
+            </div>
+          </sc-if>
+          <sc-if value="{{ geoDriftPending }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--warn-50);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+              <div style="font:var(--text-label);color:var(--warn-600);">{{ t.geoDriftMsg }}</div>
+              <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ geoOverride }}" hint-size="100%,48px">{{ t.imAtDoor }}</x-import>
+            </div>
+          </sc-if>
+          <sc-if value="{{ geoOverridden }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;background:var(--warn-50);color:var(--warn-600);border-radius:12px;padding:10px 12px;font:var(--text-label);">
+              <span style="width:8px;height:8px;border-radius:50%;background:var(--warn-500);flex-shrink:0;"></span>{{ t.overridden }}
+            </div>
+          </sc-if>
+          <sc-if value="{{ geoFar }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--danger-50);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+              <div style="font:var(--text-label);color:var(--danger-600);">{{ t.farMsg }}</div>
+              <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ helpCall }}" hint-size="100%,48px">{{ t.callOps }}</x-import>
+            </div>
+          </sc-if>
+
+          <div style="background:var(--surface-0);border-radius:var(--r-card);padding:14px 16px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:4px;">
+            <div style="font:var(--text-label);color:var(--ink-600);text-transform:uppercase;letter-spacing:0.04em;">{{ t.customer }}</div>
+            <div style="font:var(--text-body-bold);color:var(--ink-900);">{{ customerName }}</div>
+            <div style="font:var(--text-body);color:var(--ink-600);">{{ customerAddr }}</div>
+            <div style="font:var(--text-body);color:var(--ink-600);">{{ customerPhone }}</div>
+            <div style="margin-top:6px;">
+              <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" onClick="{{ callCustomer }}" hint-size="auto,44px">{{ t.callCustomer }}</x-import>
+            </div>
+          </div>
+
+          <div style="background:var(--surface-0);border-radius:var(--r-card);padding:14px 16px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:2px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="font:var(--text-label);color:var(--ink-600);text-transform:uppercase;letter-spacing:0.04em;">{{ t.order }} {{ orderId }}</div>
+              <div style="font:var(--text-micro);font-weight:700;padding:3px 8px;border-radius:999px;background:{{ payPillBg }};color:{{ payPillFg }};">{{ payPill }}</div>
+            </div>
+            <sc-for list="{{ s1Rows }}" as="row" hint-placeholder-count="4">
+              <div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px dashed var(--line-300);">
+                <div style="font:var(--text-body);color:var(--ink-900);">{{ row.l }}</div>
+                <div style="font:var(--text-body);color:var(--ink-600);white-space:nowrap;">{{ row.v }}</div>
+              </div>
+            </sc-for>
+            <div style="display:flex;justify-content:space-between;gap:12px;padding-top:10px;">
+              <div style="font:var(--text-body-bold);color:var(--ink-900);">{{ s1TotalLabel }}</div>
+              <div style="font:var(--text-h2);color:var(--ink-900);">{{ s1TotalValue }}</div>
+            </div>
+          </div>
+
+          <sc-if value="{{ showPartialBtn }}" hint-placeholder-val="{{ false }}">
+            <div style="font:var(--text-micro);color:var(--ink-600);">{{ t.partialOn }}</div>
+          </sc-if>
+          <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+            <div style="font:var(--text-micro);color:var(--ink-600);">{{ t.offlineNote }}</div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ showPartialBtn }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,140px">
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ startPartial }}" hint-size="100%,56px">{{ t.partial }}</x-import>
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ onDeliverAll }}" hint-size="100%,56px">{{ t.deliverAll }}</x-import>
+          </x-import>
+        </sc-if>
+        <sc-if value="{{ hidePartialBtn }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,84px">
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ onDeliverAll }}" hint-size="100%,56px">{{ t.deliverAll }}</x-import>
+          </x-import>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ S2 · ADJUST ══════════ -->
+    <sc-if value="{{ isS2 }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="S2 Adjust items" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarS2 }}" hint-size="100%,48px"></x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.ProgressStepper" dc-props="{{ stepperS2 }}" hint-size="100%,44px"></x-import>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="font:var(--text-body);color:var(--ink-600);">{{ t.s2Intro }}</div>
+          <sc-for list="{{ adjustItems }}" as="it" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <x-import component-from-global-scope="ZippeeRiderDS.ItemCard" dc-props="{{ it.cardProps }}" hint-size="100%,92px"></x-import>
+              <sc-if value="{{ it.reduced }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:0 4px 4px;display:flex;flex-direction:column;gap:8px;">
+                  <div style="font:var(--text-label);color:var(--warn-600);">{{ t.whyBack }}</div>
+                  <x-import component-from-global-scope="ZippeeRiderDS.ReasonChips" dc-props="{{ it.chipProps }}" hint-size="100%,80px"></x-import>
+                  <sc-if value="{{ it.isOther }}" hint-placeholder-val="{{ false }}">
+                    <input value="{{ it.otherText }}" onChange="{{ it.onOtherChange }}" placeholder="{{ t.otherPlaceholder }}" style="font:var(--text-body);padding:12px;border-radius:var(--r-input);border:1.5px solid var(--line-300);background:var(--surface-0);outline-color:var(--zip-purple-600);">
+                  </sc-if>
+                  <sc-if value="{{ it.needsPhoto }}" hint-placeholder-val="{{ false }}">
+                    <div style="font:var(--text-micro);color:var(--warn-600);">{{ t.needsPhotoNote }}</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <div style="display:flex;gap:8px;">
+            <div style="font:var(--text-label);font-weight:700;padding:6px 12px;border-radius:999px;background:var(--success-50);color:var(--success-700);">{{ deliveringChip }}</div>
+            <div style="font:var(--text-label);font-weight:700;padding:6px 12px;border-radius:999px;background:var(--warn-50);color:var(--warn-600);">{{ returningChip }}</div>
+          </div>
+        </div>
+        <sc-if value="{{ s2CtaContinue }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,84px">
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ goS2Continue }}" hint-size="100%,56px">{{ t.continue }}</x-import>
+          </x-import>
+        </sc-if>
+        <sc-if value="{{ s2CtaRto }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,110px">
+            <div style="font:var(--text-micro);color:var(--ink-600);text-align:center;">{{ t.rtoZeroNote }}</div>
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ goRtoFromS2 }}" hint-size="100%,56px">{{ t.rtoCta }}</x-import>
+          </x-import>
+        </sc-if>
+        <sc-if value="{{ s2CtaNeedReason }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,64px">
+            <div style="font:var(--text-body);color:var(--ink-600);text-align:center;padding:8px 0;">{{ t.needReason }}</div>
+          </x-import>
+        </sc-if>
+        <sc-if value="{{ s2CtaNoReduction }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,64px">
+            <div style="font:var(--text-body);color:var(--ink-600);text-align:center;padding:8px 0;">{{ t.noReduction }}</div>
+          </x-import>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ S3 · PHOTOS ══════════ -->
+    <sc-if value="{{ isS3 }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="S3 Photos" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarS3 }}" hint-size="100%,48px"></x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.ProgressStepper" dc-props="{{ stepperS3 }}" hint-size="100%,44px"></x-import>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="font:var(--text-body);color:var(--ink-600);">{{ t.s3Intro }}</div>
+          <sc-for list="{{ photoItems }}" as="pi" hint-placeholder-count="1">
+            <div style="background:var(--surface-0);border-radius:var(--r-card);padding:14px 16px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="font-size:26px;">{{ pi.emoji }}</div>
+                <div style="flex:1;">
+                  <div style="font:var(--text-body-bold);color:var(--ink-900);">{{ pi.name }}</div>
+                  <div style="font:var(--text-micro);color:var(--warn-600);">{{ pi.reasonLabel }} · {{ pi.countLabel }}</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <sc-for list="{{ pi.thumbs }}" as="th" hint-placeholder-count="0">
+                  <div style="width:64px;height:64px;border-radius:10px;background:linear-gradient(145deg,#3A2E40,#241E27);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;">
+                    <div style="font-size:20px;">{{ th.emoji }}</div>
+                    <div style="font-size:9px;color:#B7ACBE;">{{ th.t }}</div>
+                    <div onClick="{{ th.onRemove }}" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink-900);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;">✕</div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ pi.canAdd }}" hint-placeholder-val="{{ true }}">
+                <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ pi.onCapture }}" loading="{{ pi.capturing }}" hint-size="100%,48px">{{ t.openCamera }}</x-import>
+              </sc-if>
+            </div>
+          </sc-for>
+          <div style="font:var(--text-micro);color:var(--ink-600);">{{ t.galleryNote }}</div>
+        </div>
+        <sc-if value="{{ s3Ready }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,84px">
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ goS4 }}" hint-size="100%,56px">{{ t.continue }}</x-import>
+          </x-import>
+        </sc-if>
+        <sc-if value="{{ s3NotReady }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,64px">
+            <div style="font:var(--text-body);color:var(--ink-600);text-align:center;padding:8px 0;">{{ t.s3NotReadyCta }}</div>
+          </x-import>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ S4 · REVIEW ══════════ -->
+    <sc-if value="{{ isS4 }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="S4 Review" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarS4 }}" hint-size="100%,48px"></x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.ProgressStepper" dc-props="{{ stepperS4 }}" hint-size="100%,44px"></x-import>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <sc-if value="{{ calculating }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px;justify-content:center;padding:48px 0;">
+              <div style="width:18px;height:18px;border-radius:50%;border:2.5px solid var(--zip-purple-100);border-top-color:var(--zip-purple-600);animation:zpSpin 0.7s linear infinite;"></div>
+              <div style="font:var(--text-body);color:var(--ink-600);">{{ t.calculatingMsg }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ calcReady }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <x-import component-from-global-scope="ZippeeRiderDS.AmountHero" dc-props="{{ amountHeroProps }}" hint-size="100%,150px"></x-import>
+              <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;">{{ serverNote }}</div>
+              <sc-if value="{{ isPrepaidFlow }}" hint-placeholder-val="{{ false }}">
+                <div style="background:var(--info-50);border-radius:12px;padding:12px;font:var(--text-label);color:var(--info-600);">{{ prepaidInfoNote }}</div>
+              </sc-if>
+              <div style="background:var(--surface-0);border-radius:var(--r-card);padding:14px 16px;box-shadow:var(--shadow-card);">
+                <div style="font:var(--text-label);font-weight:700;color:var(--success-700);margin-bottom:6px;">{{ keptHeader }}</div>
+                <sc-for list="{{ keptRows }}" as="row" hint-placeholder-count="2">
+                  <div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line-300);">
+                    <div>
+                      <div style="font:var(--text-body);color:var(--ink-900);">{{ row.name }}</div>
+                      <div style="font:var(--text-micro);color:var(--ink-600);">{{ row.qtyStr }}</div>
+                    </div>
+                    <div style="font:var(--text-body-bold);color:var(--ink-900);white-space:nowrap;">{{ row.net }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="background:var(--surface-0);border-radius:var(--r-card);padding:14px 16px;box-shadow:var(--shadow-card);">
+                <div style="font:var(--text-label);font-weight:700;color:var(--warn-600);margin-bottom:6px;">{{ returnHeader }}</div>
+                <sc-for list="{{ returnRows }}" as="row" hint-placeholder-count="2">
+                  <div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px dashed var(--line-300);">
+                    <div>
+                      <div style="font:var(--text-body);color:var(--ink-600);text-decoration:line-through;">{{ row.name }}</div>
+                      <div style="font:var(--text-micro);color:var(--warn-600);">{{ row.qtyStr }} · {{ row.reason }}</div>
+                    </div>
+                    <div style="font:var(--text-body);color:var(--ink-400);white-space:nowrap;">{{ row.amt }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font:var(--text-micro);color:var(--ink-600);">{{ feesNote }}</div>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ calcReady }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,84px">
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ sendOtp }}" hint-size="100%,56px">{{ t.sendOtpCta }}</x-import>
+          </x-import>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ S5 · CONSENT ══════════ -->
+    <sc-if value="{{ isS5 }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="S5 Customer approval" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarS5 }}" hint-size="100%,48px"></x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.ProgressStepper" dc-props="{{ stepperS5 }}" hint-size="100%,44px"></x-import>
+        <div style="flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="font:var(--text-h1);color:var(--ink-900);">{{ t.s5Title }}</div>
+          <div style="font:var(--text-body);color:var(--ink-600);">{{ s5Desc }}</div>
+          <x-import component-from-global-scope="ZippeeRiderDS.OtpInput" dc-props="{{ otpProps }}" hint-size="100%,64px"></x-import>
+          <sc-if value="{{ otpError }}" hint-placeholder-val="{{ false }}">
+            <div style="font:var(--text-label);color:var(--danger-600);text-align:center;">{{ wrongCodeMsg }}</div>
+          </sc-if>
+          <sc-if value="{{ otpVerified }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--success-50);color:var(--success-700);border-radius:12px;padding:12px;font:var(--text-body-bold);">{{ t.approvedMsg }}</div>
+          </sc-if>
+          <div style="align-self:center;font:var(--text-micro);color:var(--ink-400);background:var(--surface-0);border:1px dashed var(--line-300);border-radius:999px;padding:5px 12px;">Demo: the customer's OTP is 4821</div>
+          <sc-if value="{{ otpWaiting }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+              <sc-if value="{{ resendGated }}" hint-placeholder-val="{{ true }}">
+                <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" timer-label="{{ resendTimerLabel }}" hint-size="100%,48px">{{ t.resend }}</x-import>
+              </sc-if>
+              <sc-if value="{{ canResend }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ resendOtp }}" hint-size="100%,48px">{{ t.resend }}</x-import>
+              </sc-if>
+              <sc-if value="{{ showVoice }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" full-width="{{ true }}" onClick="{{ voiceOtp }}" hint-size="100%,44px">{{ t.voiceCta }}</x-import>
+              </sc-if>
+              <sc-if value="{{ showSigOption }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" full-width="{{ true }}" onClick="{{ openSig }}" hint-size="100%,44px">{{ t.sigCta }}</x-import>
+                  <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;">{{ t.sigAudit }}</div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;margin-top:auto;">{{ t.otpKillNote }}</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ S6 · PAYMENT (POD) ══════════ -->
+    <sc-if value="{{ isS6 }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="S6 Payment" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarS6 }}" hint-size="100%,48px"></x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.ProgressStepper" dc-props="{{ stepperS6 }}" hint-size="100%,44px"></x-import>
+        <sc-if value="{{ qrVerifying }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.Banner" variant="info" hint-size="100%,40px">{{ t.verifyBanner }}</x-import>
+        </sc-if>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <x-import component-from-global-scope="ZippeeRiderDS.PaymentTabs" dc-props="{{ paymentTabsProps }}" hint-size="100%,56px"></x-import>
+
+          <sc-if value="{{ showQrTab }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-if value="{{ showQrPanel }}" hint-placeholder-val="{{ true }}">
+                <div style="position:relative;">
+                  <x-import component-from-global-scope="ZippeeRiderDS.QrPanel" dc-props="{{ qrProps }}" hint-size="100%,380px"></x-import>
+                  <sc-if value="{{ showQrRing }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:14px;right:14px;z-index:2;">
+                      <x-import component-from-global-scope="ZippeeRiderDS.CountdownRing" dc-props="{{ ringProps }}" hint-size="56px,56px"></x-import>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ qrGone }}" hint-placeholder-val="{{ false }}">
+                <div style="background:var(--surface-0);border-radius:var(--r-card);padding:20px 16px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:10px;align-items:center;">
+                  <div style="font:var(--text-body);color:var(--ink-600);text-align:center;">{{ t.qrGoneMsg }}</div>
+                  <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" onClick="{{ regenerateQr }}" hint-size="auto,48px">{{ t.genNewQr }}</x-import>
+                </div>
+              </sc-if>
+              <sc-if value="{{ qrWaiting }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;justify-content:center;gap:8px;font:var(--text-label);color:var(--zip-purple-700);">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--zip-purple-600);animation:zpPulse 1.2s infinite;"></span>{{ t.waitingScan }}
+                </div>
+              </sc-if>
+              <sc-if value="{{ qrPaid }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--success-50);color:var(--success-700);border-radius:12px;padding:12px;font:var(--text-body-bold);">{{ qrPaidMsg }}</div>
+              </sc-if>
+              <sc-if value="{{ qrVerifying }}" hint-placeholder-val="{{ false }}">
+                <div style="background:var(--info-50);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+                  <div style="font:var(--text-label);color:var(--info-600);">{{ verifyMsg }}</div>
+                  <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ voidQr }}" loading="{{ voiding }}" hint-size="100%,48px">{{ t.voidCollectCash }}</x-import>
+                  <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" full-width="{{ true }}" onClick="{{ convertRto }}" hint-size="100%,44px">{{ t.convertRtoCta }}</x-import>
+                </div>
+              </sc-if>
+              <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;">{{ qrMetaStr }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showCashTab }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <sc-if value="{{ cashChecking }}" hint-placeholder-val="{{ false }}">
+                <div style="background:var(--surface-0);border-radius:var(--r-card);padding:24px 16px;box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:center;gap:10px;">
+                  <div style="width:18px;height:18px;border-radius:50%;border:2.5px solid var(--zip-purple-100);border-top-color:var(--zip-purple-600);animation:zpSpin 0.7s linear infinite;flex-shrink:0;"></div>
+                  <div style="font:var(--text-label);color:var(--ink-600);">{{ t.pspChecking }}</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ cashVerifyLocked }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="ZippeeRiderDS.CashConfirm" dc-props="{{ cashLockedProps }}" hint-size="100%,220px"></x-import>
+                <div style="font:var(--text-micro);color:var(--info-600);text-align:center;">{{ t.cashVerifyLock }}</div>
+              </sc-if>
+              <sc-if value="{{ cashFree }}" hint-placeholder-val="{{ true }}">
+                <x-import component-from-global-scope="ZippeeRiderDS.CashConfirm" dc-props="{{ cashConfirmProps }}" hint-size="100%,220px"></x-import>
+                <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;">{{ cashChangeNote }}</div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <div style="margin-top:auto;">
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" full-width="{{ true }}" onClick="{{ openCantPay }}" hint-size="100%,44px">{{ cantPayTitle }}</x-import>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ S6-PREPAID · NOTHING TO PAY ══════════ -->
+    <sc-if value="{{ isPrepaidPay }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="S6 Refund (prepaid)" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarS6 }}" hint-size="100%,48px"></x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.ProgressStepper" dc-props="{{ stepperS6 }}" hint-size="100%,44px"></x-import>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;justify-content:center;">
+          <div style="background:var(--surface-0);border-radius:var(--r-card);padding:28px 20px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;">
+            <div style="font:var(--text-hero);color:var(--ink-900);">{{ t.nothingToPay }}</div>
+            <div style="font:var(--text-body);color:var(--ink-600);">{{ prepaidRefundDesc }}</div>
+            <div style="font:var(--text-label);color:var(--info-600);background:var(--info-50);border-radius:999px;padding:6px 14px;">{{ t.notifiedPill }}</div>
+          </div>
+          <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;">{{ t.refundViaBrand }}</div>
+        </div>
+        <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,84px">
+          <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ prepaidContinue }}" hint-size="100%,56px">{{ t.continueFinish }}</x-import>
+        </x-import>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ S7 · FINISH ══════════ -->
+    <sc-if value="{{ isS7 }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="S7 Finish" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarS7 }}" hint-size="100%,48px"></x-import>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font:var(--text-h1);color:var(--ink-900);">{{ t.s7Title }}</div>
+          <sc-if value="{{ paidRow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;background:var(--success-50);color:var(--success-700);border-radius:12px;padding:10px 12px;font:var(--text-label);">{{ paidRowText }}</div>
+          </sc-if>
+          <div style="background:var(--surface-0);border-radius:var(--r-card);padding:14px 16px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:10px;">
+            <div style="font:var(--text-body-bold);color:var(--ink-900);">{{ t.podStep }}</div>
+            <div style="font:var(--text-micro);color:var(--ink-600);">{{ t.podDesc }}</div>
+            <sc-if value="{{ podPhoto }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:64px;height:64px;border-radius:10px;background:linear-gradient(145deg,#3A2E40,#241E27);display:flex;align-items:center;justify-content:center;font-size:22px;">📦</div>
+                <div style="font:var(--text-label);color:var(--success-700);">{{ t.photoDone }}</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ podPhotoPending }}" hint-placeholder-val="{{ true }}">
+              <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ podCapture }}" loading="{{ podCapturing }}" hint-size="100%,48px">{{ t.takePod }}</x-import>
+            </sc-if>
+          </div>
+          <div style="background:var(--info-50);border-radius:12px;padding:12px;font:var(--text-label);color:var(--info-600);">{{ handoverNote }}</div>
+        </div>
+        <sc-if value="{{ s7Ready }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,84px">
+            <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ completeDelivery }}" hint-size="100%,56px">{{ t.completeCta }}</x-import>
+          </x-import>
+        </sc-if>
+        <sc-if value="{{ s7NotReady }}" hint-placeholder-val="{{ true }}">
+          <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,64px">
+            <div style="font:var(--text-body);color:var(--ink-600);text-align:center;padding:8px 0;">{{ t.s7NotReadyCta }}</div>
+          </x-import>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ SUCCESS ══════════ -->
+    <sc-if value="{{ isSuccess }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Success" style="display:flex;flex-direction:column;height:100%;">
+        <div style="flex:1;overflow-y:auto;padding:24px 16px 16px;">
+          <x-import component-from-global-scope="ZippeeRiderDS.SuccessScreen" dc-props="{{ successProps }}" hint-size="100%,420px">
+            <x-import component-from-global-scope="ZippeeRiderDS.TaskCard" dc-props="{{ returnTaskProps }}" hint-size="100%,96px"></x-import>
+          </x-import>
+          <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;margin-top:14px;">{{ successFooter }}</div>
+        </div>
+        <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,84px">
+          <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ backToRoute }}" hint-size="100%,56px">{{ t.backToRoute }}</x-import>
+        </x-import>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ RTO ══════════ -->
+    <sc-if value="{{ isRto }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Full RTO" style="display:flex;flex-direction:column;height:100%;">
+        <x-import component-from-global-scope="ZippeeRiderDS.AppBar" dc-props="{{ appBarRto }}" hint-size="100%,48px"></x-import>
+        <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;justify-content:center;">
+          <div style="background:var(--surface-0);border-radius:var(--r-card);padding:28px 20px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:10px;text-align:center;">
+            <div style="font:var(--text-h1);color:var(--ink-900);">{{ t.rtoTitle }}</div>
+            <div style="font:var(--text-body);color:var(--ink-600);">{{ t.rtoDesc }}</div>
+          </div>
+          <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;">{{ t.draftVoided }}</div>
+        </div>
+        <x-import component-from-global-scope="ZippeeRiderDS.BottomCta" hint-size="100%,140px">
+          <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" full-width="{{ true }}" onClick="{{ rtoCancel }}" hint-size="100%,44px">{{ t.goBack }}</x-import>
+          <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ rtoConfirm }}" hint-size="100%,56px">{{ t.openRtoCta }}</x-import>
+        </x-import>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ BREAKDOWN SHEET ══════════ -->
+    <sc-if value="{{ showBreakdown }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeBreakdown }}" style="position:absolute;inset:0;background:rgba(26,20,30,0.45);z-index:30;"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:var(--surface-0);border-radius:20px 20px 0 0;padding:20px 16px 24px;animation:zpSheetIn 0.25s var(--ease-standard);max-height:78%;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+        <div style="font:var(--text-h2);color:var(--ink-900);">{{ breakdownTitle }}</div>
+        <div style="font:var(--text-micro);color:var(--ink-400);margin-bottom:8px;">{{ breakdownServerNote }}</div>
+        <sc-for list="{{ breakdownRows }}" as="r" hint-placeholder-count="6">
+          <div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line-300);">
+            <div>
+              <div style="font:var(--text-body);color:{{ r.c }};text-decoration:{{ r.d }};">{{ r.l }}</div>
+              <sc-if value="{{ r.sub }}" hint-placeholder-val="{{ false }}">
+                <div style="font:var(--text-micro);color:var(--ink-400);">{{ r.sub }}</div>
+              </sc-if>
+            </div>
+            <div style="font:var(--text-body-bold);color:{{ r.c }};text-decoration:{{ r.d }};white-space:nowrap;">{{ r.v }}</div>
+          </div>
+        </sc-for>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:12px 0 4px;">
+          <div style="font:var(--text-body-bold);color:var(--ink-900);">{{ breakdownTotalLabel }}</div>
+          <div style="font:var(--text-h1);color:var(--ink-900);">{{ breakdownTotalValue }}</div>
+        </div>
+        <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" full-width="{{ true }}" onClick="{{ closeBreakdown }}" hint-size="100%,44px">{{ t.close }}</x-import>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ SIGNATURE SHEET ══════════ -->
+    <sc-if value="{{ showSig }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeSig }}" style="position:absolute;inset:0;background:rgba(26,20,30,0.45);z-index:30;"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:var(--surface-0);border-radius:20px 20px 0 0;padding:20px 16px 24px;animation:zpSheetIn 0.25s var(--ease-standard);display:flex;flex-direction:column;gap:10px;">
+        <div style="font:var(--text-h2);color:var(--ink-900);">{{ t.sigSheetTitle }}</div>
+        <div style="font:var(--text-body);color:var(--ink-600);">{{ sigDesc }}</div>
+        <canvas ref="{{ sigRef }}" onPointerDown="{{ sigDown }}" onPointerMove="{{ sigMove }}" onPointerUp="{{ sigUp }}" onPointerLeave="{{ sigUp }}" style="width:100%;height:150px;border:1.5px dashed var(--line-300);border-radius:12px;background:var(--surface-50);touch-action:none;cursor:crosshair;"></canvas>
+        <div style="display:flex;gap:8px;">
+          <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" onClick="{{ clearSig }}" hint-size="auto,44px">{{ t.clearCta }}</x-import>
+          <div style="flex:1;">
+            <sc-if value="{{ sigHas }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="primary" full-width="{{ true }}" onClick="{{ confirmSig }}" hint-size="100%,56px">{{ t.confirmApproval }}</x-import>
+            </sc-if>
+            <sc-if value="{{ sigEmpty }}" hint-placeholder-val="{{ true }}">
+              <div style="font:var(--text-micro);color:var(--ink-400);text-align:center;padding:14px 0;">{{ t.askSign }}</div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ CAN'T-PAY SHEET ══════════ -->
+    <sc-if value="{{ showCantPay }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeCantPay }}" style="position:absolute;inset:0;background:rgba(26,20,30,0.45);z-index:30;"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:var(--surface-0);border-radius:20px 20px 0 0;padding:20px 16px 24px;animation:zpSheetIn 0.25s var(--ease-standard);display:flex;flex-direction:column;gap:10px;">
+        <div style="font:var(--text-h2);color:var(--ink-900);">{{ cantPayTitle }}</div>
+        <div style="font:var(--text-body);color:var(--ink-600);">{{ t.cantPayDesc }}</div>
+        <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ returnMore }}" hint-size="100%,56px">{{ t.returnMoreCta }}</x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ convertRto }}" hint-size="100%,56px">{{ t.convertRtoCta }}</x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" full-width="{{ true }}" onClick="{{ closeCantPay }}" hint-size="100%,44px">{{ t.cancel }}</x-import>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ HELP SHEET ══════════ -->
+    <sc-if value="{{ showHelp }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeHelp }}" style="position:absolute;inset:0;background:rgba(26,20,30,0.45);z-index:30;"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;z-index:31;background:var(--surface-0);border-radius:20px 20px 0 0;padding:20px 16px 24px;animation:zpSheetIn 0.25s var(--ease-standard);display:flex;flex-direction:column;gap:10px;">
+        <div style="font:var(--text-h2);color:var(--ink-900);">{{ t.helpTitle }}</div>
+        <div style="font:var(--text-body);color:var(--ink-600);">{{ t.helpDesc }}</div>
+        <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="secondary" full-width="{{ true }}" onClick="{{ helpCall }}" hint-size="100%,56px">{{ t.callOpsCta }}</x-import>
+        <x-import component-from-global-scope="ZippeeRiderDS.Button" variant="ghost" full-width="{{ true }}" onClick="{{ closeHelp }}" hint-size="100%,44px">{{ t.close }}</x-import>
+      </div>
+    </sc-if>
+
+    <!-- ══════════ TOAST ══════════ -->
+    <sc-if value="{{ showToast }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:40;animation:zpToastIn 0.2s ease-out;width:max-content;max-width:340px;">
+        <x-import component-from-global-scope="ZippeeRiderDS.Toast" hint-size="auto,44px">{{ toastMsg }}</x-import>
+      </div>
+    </sc-if>
+
+  </div>
+  <div style="font-size:11px;color:#9A8FA0;">Prototype · PRD v4.0 · the server calculates, the app displays</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;gpsScenario&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;at_door&quot;, &quot;drift_300m_1km&quot;, &quot;beyond_1km&quot;], &quot;default&quot;: &quot;at_door&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Doorstep scenario (PRD edge cases)&quot; },
+  &quot;upiOutcome&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;customer_pays&quot;, &quot;never_pays&quot;, &quot;under_verification&quot;], &quot;default&quot;: &quot;customer_pays&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Doorstep scenario (PRD edge cases)&quot; },
+  &quot;offline&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Doorstep scenario (PRD edge cases)&quot; },
+  &quot;fastTimers&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo&quot; }
+}">
+class Component extends DCLogic {
+  KEY = 'zippee-partial-draft-v2';
+  LANG_KEY = 'zippee-lang-v1';
+  ITEMS = [
+    { id: 'a', name: 'Argan Hair Serum 100 ml', emoji: '🧴', price: 500, qty: 2 },
+    { id: 'b', name: 'Vitamin C Face Wash', emoji: '🧼', price: 300, qty: 1 },
+    { id: 'c', name: 'Aloe Lip Balm', emoji: '💄', price: 100, qty: 2 },
+  ];
+  PHOTO_REASONS = ['wrong-item', 'damaged', 'expired'];
+
+  state = {
+    screen: 'home', orderType: 'pod',
+    counts: { a: 2, b: 1, c: 2 }, reasons: {}, otherTexts: {}, photos: {},
+    capturingId: null, calcDirty: true, revision: 0, calculating: false,
+    showBreakdown: false,
+    otp: this.freshOtp(),
+    showSig: false, sigHas: false,
+    qr: null, payTab: 'qr', voiding: false, showCantPay: false,
+    podPhoto: false, podCapturing: false,
+    cashInHand: 2140, payMode: null,
+    donePod: false, donePrepaid: false, returnTask: false,
+    toast: null, showHelp: false, lang: 'en', geoOverridden: false,
+    draftInfo: null, rtoFrom: 's2',
+  };
+
+  freshOtp() { return { sent: false, value: '', error: false, attempts: 0, rounds: 0, resendReadyAt: 0, verified: false, by: null }; }
+  // Scenario switches: the Claude Design editor sets these as props; on the published page
+  // they can also come from the URL (?gps=…&upi=…&offline=1&fast=1).
+  sp(k) {
+    const q = { gpsScenario: 'gps', upiOutcome: 'upi', offline: 'offline', fastTimers: 'fast' }[k];
+    try { const v = new URLSearchParams(location.search).get(q); if (v !== null) return (k === 'offline' || k === 'fastTimers') ? (v === '1' || v === 'true') : v; } catch (e) {}
+    return this.props[k];
+  }
+  fast() { return !!this.sp('fastTimers'); }
+  qrTotal() { return this.fast() ? 30 : 300; }
+  resendTotal() { return this.fast() ? 6 : 30; }
+
+  reasonList(hi) {
+    return [
+      { id: 'changed-mind', label: hi ? 'Mann badal gaya' : 'Changed mind', icon: '💭' },
+      { id: 'wrong-item', label: hi ? 'Galat item' : 'Wrong item', icon: '🔄', photoRequired: true },
+      { id: 'damaged', label: hi ? 'Damage hai' : 'Damaged', icon: '📦', photoRequired: true },
+      { id: 'expired', label: 'Expired / quality', icon: '📅', photoRequired: true },
+      { id: 'size-fit', label: 'Size / fit', icon: '📏' },
+      { id: 'other', label: hi ? 'Kuch aur' : 'Other', icon: '✏️' },
+    ];
+  }
+
+  componentDidMount() {
+    try {
+      const d = localStorage.getItem(this.KEY); if (d) this.setState({ draftInfo: JSON.parse(d) });
+      const lg = localStorage.getItem(this.LANG_KEY); if (lg === 'hi' || lg === 'en') this.setState({ lang: lg });
+    } catch (e) {}
+  }
+  componentWillUnmount() { clearTimeout(this._toastT); }
+
+  armTicker() {
+    // The host periodically sweeps ALL page/frame timers, so the 1s heartbeat lives in a
+    // Blob Web Worker — its interval runs in the worker realm, out of the sweep's reach,
+    // and onmessage (not a timer) drives tick() on the current logic instance.
+    window.__zpTickOwner = this;
+    if (!window.__zpTickWorker) {
+      try {
+        const blob = new Blob(['setInterval(function(){ postMessage(1); }, 1000);'], { type: 'text/javascript' });
+        const wk = new Worker(URL.createObjectURL(blob));
+        wk.onmessage = () => { try { if (window.__zpTickOwner) window.__zpTickOwner.tick(); } catch (e) {} };
+        window.__zpTickWorker = wk;
+      } catch (e) {}
+    }
+  }
+
+  tick() {
+    const now = Date.now();
+    this.setState(prev => {
+      if (prev.screen === 's6' && prev.qr && prev.qr.status === 'waiting') {
+        const q = { ...prev.qr };
+        const elapsed = (now - q.createdAt) / 1000;
+        const out = this.sp('upiOutcome') ?? 'customer_pays';
+        if (out === 'customer_pays' && elapsed >= (this.fast() ? 8 : 20)) {
+          q.status = 'paid'; q.advanceAt = now + 1600;
+        } else if (out === 'under_verification' && elapsed >= (this.fast() ? 6 : 12)) {
+          q.status = 'verifying'; q.verifyUntil = now + (this.fast() ? 20 : 120) * 1000;
+        } else if (now >= q.expiresAt) {
+          q.status = 'expired'; q.active = false;
+        } else {
+          return null;
+        }
+        return { qr: q };
+      }
+      return null;
+    });
+    const s = this.state;
+    if (s.screen === 's6' && s.qr && s.qr.status === 'paid' && s.qr.advanceAt && now >= s.qr.advanceAt && !this._adv) {
+      this._adv = true;
+      this.finishPayment('upi');
+      this._adv = false;
+    }
+    this.forceUpdate();
+  }
+
+  totals() {
+    const s = this.state;
+    const lines = this.ITEMS.map((it, i) => {
+      const kept = s.counts[it.id] ?? it.qty;
+      const returned = it.qty - kept;
+      return { ...it, seq: i + 1, kept, returned, net: it.price * kept, retNet: it.price * returned };
+    });
+    const keptCount = lines.reduce((a, l) => a + l.kept, 0);
+    const retCount = lines.reduce((a, l) => a + l.returned, 0);
+    const merch = lines.reduce((a, l) => a + l.net, 0);
+    const fees = 49 + (s.orderType === 'pod' ? 25 : 0);
+    return { lines, keptCount, retCount, merch, fees, payable: keptCount > 0 ? merch + fees : 0, refund: lines.reduce((a, l) => a + l.retNet, 0) };
+  }
+  fmt(n) { return '₹' + n.toLocaleString('en-IN'); }
+  mmss(sec) { const m = Math.floor(sec / 60), s2 = sec % 60; return m + ':' + String(s2).padStart(2, '0'); }
+  needsPhotos() {
+    const s = this.state;
+    return this.totals().lines.some(l => l.returned > 0 && this.PHOTO_REASONS.includes(s.reasons[l.id]));
+  }
+  stepNames(hi) {
+    const pod = this.state.orderType === 'pod';
+    return [
+      hi ? 'Items chunein' : 'Adjust items',
+      ...(this.needsPhotos() ? ['Photos'] : []),
+      hi ? 'Naya bill' : 'Review',
+      'Approval',
+      pod ? 'Payment' : 'Refund',
+    ];
+  }
+
+  toast(msg) {
+    clearTimeout(this._toastT);
+    this.setState({ toast: msg });
+    this._toastT = setTimeout(() => this.setState({ toast: null }), 4000);
+  }
+
+  saveDraft() {
+    const s = this.state;
+    if (!['s2', 's3', 's4', 's5', 's6', 'prepaidPay', 's7'].includes(s.screen)) return;
+    const pc = {}; Object.keys(s.photos).forEach(k => { pc[k] = (s.photos[k] || []).length; });
+    const d = { screen: s.screen, orderType: s.orderType, counts: s.counts, reasons: s.reasons, otherTexts: s.otherTexts, photoCounts: pc, revision: s.revision, geoOverridden: s.geoOverridden };
+    try { localStorage.setItem(this.KEY, JSON.stringify(d)); } catch (e) {}
+    this.setState({ draftInfo: d });
+  }
+  clearDraft() {
+    try { localStorage.removeItem(this.KEY); } catch (e) {}
+    this.setState({ draftInfo: null });
+  }
+  resume() {
+    const d = this.state.draftInfo; if (!d) return;
+    const photos = {};
+    Object.keys(d.photoCounts || {}).forEach(k => { photos[k] = Array.from({ length: d.photoCounts[k] }, () => ({ t: 'saved' })); });
+    let screen = d.screen;
+    if (['s5', 's6', 'prepaidPay'].includes(screen)) screen = 's4';
+    this.setState({
+      orderType: d.orderType, counts: d.counts, reasons: d.reasons || {}, otherTexts: d.otherTexts || {},
+      photos, revision: d.revision || 0, calcDirty: false, geoOverridden: !!d.geoOverridden,
+      otp: this.freshOtp(), qr: null, payTab: 'qr', podPhoto: false, screen,
+      calculating: screen === 's4',
+    }, () => { if (screen === 's4') setTimeout(() => this.setState({ calculating: false }), 700); });
+  }
+
+  maybeKillOtp(msg) {
+    const s = this.state;
+    if (s.otp.sent || s.otp.verified) {
+      this.setState({ otp: this.freshOtp(), qr: null });
+      this.toast(msg);
+    }
+  }
+
+  finishPayment(mode) {
+    const total = this.totals().payable;
+    this.setState(s => ({
+      payMode: mode, screen: 's7', qr: null, showCantPay: false,
+      cashInHand: mode === 'cash' ? s.cashInHand + total : s.cashInHand,
+    }), () => this.saveDraft());
+  }
+
+  newQr(regensLeft) {
+    const t = this.qrTotal();
+    const now = Date.now();
+    this.setState({ qr: { active: true, status: 'waiting', createdAt: now, expiresAt: now + t * 1000, total: t, regensLeft } });
+  }
+
+  renderVals() {
+    this.armTicker();
+    const s = this.state;
+    const hi = s.lang === 'hi';
+    const gps = this.sp('gpsScenario') ?? 'at_door';
+    const offline = !!this.sp('offline');
+    const tot = this.totals();
+    const pod = s.orderType === 'pod';
+    const orderId = pod ? '#Z-4821' : '#Z-4790';
+    const customerName = pod ? 'Ananya Sharma' : 'Rohan Mehta';
+    const customerAddr = pod ? 'A-14, 2nd Floor, Green Park Extn, New Delhi' : 'C-9, Hauz Khas Village, New Delhi';
+    const customerPhone = '+91 98104 40731';
+    const payableStr = this.fmt(tot.payable);
+    const refundStr = this.fmt(tot.refund);
+    const keptSummary = hi ? (tot.keptCount + ' rakhe items') : (tot.keptCount + ' kept item' + (tot.keptCount === 1 ? '' : 's'));
+    const returnFee = pod ? 29 : 26;
+    const REASONS = this.reasonList(hi);
+    const podOriginalStr = '₹1,574';
+    const prepaidPaidStr = '₹1,549';
+
+    // ---- static string table ----
+    const EN = {
+      offlineBanner: "You're offline — partial delivery unavailable",
+      offlineNote: 'No connection: deliver everything or start a full return (RTO). This event is logged.',
+      doorTitle: "At the customer's door",
+      deliverAll: 'Deliver all 5 items',
+      partial: 'Customer wants to return item(s)',
+      geoOk: "Location verified — you're at the door",
+      geoDriftMsg: 'GPS shows you ~400 m away — drift is common in high-rises. Confirm you are at the door; this is flagged for audit.',
+      imAtDoor: "I'm at the door",
+      overridden: 'Location override recorded — flagged for audit',
+      farMsg: "You're ~1.2 km from the address — partial delivery is blocked here. Contact ops.",
+      callOps: 'Call ops', customer: 'Customer', order: 'Order', callCustomer: 'Call customer',
+      partialOn: 'Partial delivery is on for GlowKart orders — customer keeps some, returns some.',
+      s2Intro: 'Set what the customer keeps. Every reduction needs a reason — the server recalculates the bill.',
+      whyBack: 'Why is it coming back?',
+      otherPlaceholder: 'Type the reason (max 100 chars)',
+      needsPhotoNote: 'This reason needs 1–3 photos — next step.',
+      continue: 'Continue',
+      rtoZeroNote: 'Nothing kept — a zero-item delivery is never allowed.',
+      rtoCta: 'Return everything — full RTO',
+      needReason: 'Pick a reason for each reduced item to continue',
+      noReduction: 'No items reduced — go back to deliver everything',
+      s3Intro: 'Photos are the evidence trail — they protect you in disputes. Camera only, uploads happen in the background.',
+      openCamera: 'Open camera',
+      galleryNote: 'Gallery is disabled — photos must come from the camera at the door.',
+      s3NotReadyCta: 'Continue appears once every flagged item has its photo',
+      calculatingMsg: 'Calculating the new bill on the server…',
+      sendOtpCta: 'Send OTP to customer',
+      s5Title: 'Ask the customer for the OTP',
+      approvedMsg: 'Approved by customer ✓',
+      resend: 'Resend OTP',
+      voiceCta: 'Send voice OTP instead',
+      sigCta: 'Take customer signature instead',
+      sigAudit: 'For failed OTP rounds — signatures are sample-audited',
+      otpKillNote: 'Changing the item selection cancels this OTP automatically',
+      verifyBanner: 'Payment under verification — collect nothing more',
+      qrGoneMsg: 'The QR was voided. Generate a new one or collect cash.',
+      genNewQr: 'Generate new QR',
+      waitingScan: 'Waiting for the customer to scan…',
+      voidCollectCash: 'Void QR & collect cash',
+      convertRtoCta: 'Convert to full RTO',
+      pspChecking: 'Checking with the PSP that nothing was paid — voiding the QR…',
+      cashVerifyLock: 'Payment under verification — resolve it from the UPI QR tab first',
+      nothingToPay: 'Nothing to pay',
+      notifiedPill: 'Customer notified on WhatsApp + SMS',
+      refundViaBrand: 'Refunds always run through the brand — never at the door.',
+      continueFinish: 'Continue to finish',
+      s7Title: 'Finish the return',
+      podStep: 'Take the proof-of-delivery photo',
+      podDesc: 'Kept items + return items in one frame. Camera only — uploads in the background.',
+      photoDone: 'Photo captured ✓',
+      takePod: 'Take PoD photo',
+      completeCta: 'Complete delivery',
+      s7NotReadyCta: 'Take the PoD photo to finish',
+      backToRoute: 'Back to route',
+      rtoTitle: 'Full return — RTO',
+      rtoDesc: 'All 5 items go back to Saket dark store. No payment is collected. The existing RTO flow takes over from here — nothing new to learn.',
+      draftVoided: 'The partial draft was voided on the server.',
+      goBack: 'Go back',
+      openRtoCta: 'Open the RTO flow',
+      close: 'Close',
+      sigSheetTitle: 'Customer signature',
+      clearCta: 'Clear',
+      confirmApproval: 'Confirm approval',
+      askSign: 'Ask the customer to sign above',
+      cantPayDesc: 'Two ways out — nothing in between. The amount is never negotiated at the door.',
+      returnMoreCta: 'Return more items — recalculate',
+      cancel: 'Cancel',
+      helpTitle: 'Help',
+      helpDesc: 'Stuck at the door? Ops can see this order and your draft in real time.',
+      callOpsCta: 'Call ops control room',
+    };
+    const HIN = {
+      offlineBanner: 'Aap offline hain — partial delivery uplabdh nahi',
+      offlineNote: 'Network nahi: poori delivery karein ya full return (RTO) shuru karein. Yeh event log hota hai.',
+      doorTitle: 'Customer ke darwaze par',
+      deliverAll: 'Sabhi 5 items deliver karein',
+      partial: 'Customer kuch items return karna chahta hai',
+      geoOk: 'Location verified — aap darwaze par hain',
+      geoDriftMsg: 'GPS aapko ~400 m door dikha raha hai — high-rise mein aam hai. Confirm karein ki aap darwaze par hain; yeh audit ke liye flag hota hai.',
+      imAtDoor: 'Main darwaze par hoon',
+      overridden: 'Location override record hua — audit ke liye flagged',
+      farMsg: 'Aap address se ~1.2 km door hain — yahan partial delivery blocked hai. Ops se baat karein.',
+      callOps: 'Ops ko call karein', customer: 'Customer', order: 'Order', callCustomer: 'Customer ko call karein',
+      partialOn: 'GlowKart orders par partial delivery on hai — customer kuch rakhe, kuch lautaye.',
+      s2Intro: 'Set karein customer kya rakhega. Har kami ka reason zaroori hai — naya bill server banata hai.',
+      whyBack: 'Wapas kyun aa raha hai?',
+      otherPlaceholder: 'Reason likhein (max 100 chars)',
+      needsPhotoNote: 'Is reason ke liye 1–3 photos chahiye — agla step.',
+      continue: 'Aage badhein',
+      rtoZeroNote: 'Kuch nahi rakha — zero-item delivery kabhi allowed nahi.',
+      rtoCta: 'Sab wapas karein — full RTO',
+      needReason: 'Aage badhne ke liye har kam kiye item ka reason chunein',
+      noReduction: 'Koi item kam nahi hua — sab deliver karne ke liye wapas jaayein',
+      s3Intro: 'Photos aapka saboot hain — dispute mein aapko bachati hain. Sirf camera, upload background mein hota hai.',
+      openCamera: 'Camera kholein',
+      galleryNote: 'Gallery band hai — photo darwaze par camera se hi leni hai.',
+      s3NotReadyCta: 'Har flagged item ki photo lene ke baad hi Continue dikhega',
+      calculatingMsg: 'Server par naya bill ban raha hai…',
+      sendOtpCta: 'Customer ko OTP bhejein',
+      s5Title: 'Customer se OTP poochein',
+      approvedMsg: 'Customer ne approve kiya ✓',
+      resend: 'OTP dobara bhejein',
+      voiceCta: 'Voice OTP bhejein',
+      sigCta: 'Customer ka signature lein',
+      sigAudit: 'OTP fail hone par — signatures sample-audit hote hain',
+      otpKillNote: 'Item selection badalne par yeh OTP apne aap cancel ho jata hai',
+      verifyBanner: 'Payment verify ho raha hai — aur kuch na lein',
+      qrGoneMsg: 'QR void ho gaya. Naya banayein ya cash lein.',
+      genNewQr: 'Naya QR banayein',
+      waitingScan: 'Customer ke scan ka intezar…',
+      voidCollectCash: 'QR void karein — cash lein',
+      convertRtoCta: 'Full RTO mein badlein',
+      pspChecking: 'PSP se check ho raha hai ki payment nahi aayi — QR void ho raha hai…',
+      cashVerifyLock: 'Payment verify ho raha hai — pehle UPI QR tab se hal karein',
+      nothingToPay: 'Kuch dena nahi hai',
+      notifiedPill: 'Customer ko WhatsApp + SMS par bata diya',
+      refundViaBrand: 'Refund hamesha brand se hota hai — darwaze par kabhi nahi.',
+      continueFinish: 'Aage badhein — khatam karein',
+      s7Title: 'Return poora karein',
+      podStep: 'Proof-of-delivery photo lein',
+      podDesc: 'Rakhe items + wapas jaane wale items ek frame mein. Sirf camera — upload background mein.',
+      photoDone: 'Photo le li ✓',
+      takePod: 'PoD photo lein',
+      completeCta: 'Delivery poori karein',
+      s7NotReadyCta: 'Khatam karne ke liye PoD photo lein',
+      backToRoute: 'Route par wapas',
+      rtoTitle: 'Poora return — RTO',
+      rtoDesc: 'Sabhi 5 items Saket dark store wapas jayenge. Koi payment nahi. Yahan se existing RTO flow sambhalta hai — kuch naya nahi seekhna.',
+      draftVoided: 'Partial draft server par void ho gaya.',
+      goBack: 'Wapas jaayein',
+      openRtoCta: 'RTO flow kholein',
+      close: 'Band karein',
+      sigSheetTitle: 'Customer ka signature',
+      clearCta: 'Saaf karein',
+      confirmApproval: 'Approval confirm karein',
+      askSign: 'Customer se upar sign karwayein',
+      cantPayDesc: 'Do hi raste — beech ka kuch nahi. Amount par darwaze par kabhi mol-bhaav nahi hota.',
+      returnMoreCta: 'Aur items wapas karein — naya hisaab',
+      cancel: 'Cancel karein',
+      helpTitle: 'Madad',
+      helpDesc: 'Darwaze par atak gaye? Ops ko yeh order aur aapka draft live dikhta hai.',
+      callOpsCta: 'Ops control room ko call karein',
+    };
+    const t = hi ? HIN : EN;
+
+    // ---- flow chips (prototype chrome, EN) ----
+    const chipLabels = ['Home', 'S1 · Task', 'S2 · Adjust', 'S3 · Photos', 'S4 · Review', 'S5 · OTP', pod ? 'S6 · Payment' : 'S6 · Refund', 'S7 · Finish', 'Done'];
+    const idxMap = { home: 0, s1: 1, s2: 2, s3: 3, s4: 4, s5: 5, s6: 6, prepaidPay: 6, s7: 7, success: 8 };
+    const activeIdx = idxMap[s.screen] ?? -1;
+    const flowChips = chipLabels.map((label, i) => {
+      const done = activeIdx > i, active = activeIdx === i;
+      return {
+        label,
+        bg: active ? '#85328C' : done ? '#F3E8F5' : '#FFFFFF',
+        fg: active ? '#FFFFFF' : done ? '#6C2873' : '#7A6F80',
+        bd: active ? '#85328C' : done ? '#E4D3E8' : '#E2DCE6',
+      };
+    });
+    if (s.screen === 'rto') flowChips.push({ label: '↳ Full return (RTO)', bg: '#85328C', fg: '#FFFFFF', bd: '#85328C' });
+
+    // ---- geofence ----
+    const geoOk = gps === 'at_door';
+    const geoDriftPending = gps === 'drift_300m_1km' && !s.geoOverridden;
+    const geoOverridden = gps === 'drift_300m_1km' && s.geoOverridden;
+    const geoFar = gps === 'beyond_1km';
+    const showPartialBtn = !offline && !geoFar && !geoDriftPending;
+
+    // ---- S1 order rows (sequenced, no coupon) ----
+    const s1Rows = [
+      ...this.ITEMS.map((it, i) => ({ l: (i + 1) + ' · ' + it.emoji + ' ' + it.name + ' ×' + it.qty, v: this.fmt(it.price * it.qty) })),
+      { l: pod ? 'Delivery ₹49 + COD ₹25' : (hi ? 'Delivery fee' : 'Delivery fee'), v: this.fmt(pod ? 74 : 49) },
+    ];
+
+    // ---- S2 items ----
+    const adjustItems = tot.lines.map(l => {
+      const reason = s.reasons[l.id];
+      return {
+        id: l.id,
+        reduced: l.returned > 0,
+        isOther: reason === 'other',
+        otherText: s.otherTexts[l.id] || '',
+        onOtherChange: (e) => {
+          const v = (e.target.value || '').slice(0, 100);
+          this.setState(st => ({ otherTexts: { ...st.otherTexts, [l.id]: v } }), () => this.saveDraft());
+        },
+        needsPhoto: this.PHOTO_REASONS.includes(reason),
+        cardProps: {
+          name: l.seq + ' · ' + l.name, emoji: l.emoji, ordered: l.qty, count: l.kept,
+          onChange: (c) => {
+            this.setState(st => {
+              const counts = { ...st.counts, [l.id]: c };
+              const reasons = { ...st.reasons }; const photos = { ...st.photos };
+              if (c >= l.qty) { delete reasons[l.id]; delete photos[l.id]; }
+              return { counts, reasons, photos, calcDirty: true };
+            }, () => { this.maybeKillOtp(hi ? 'OTP cancel — item list badal gayi' : 'OTP cancelled — the item list changed'); this.saveDraft(); });
+          },
+        },
+        chipProps: {
+          options: REASONS, value: reason,
+          onChange: (rid) => {
+            this.setState(st => ({ reasons: { ...st.reasons, [l.id]: rid }, calcDirty: true }), () => { this.maybeKillOtp(hi ? 'OTP cancel — item list badal gayi' : 'OTP cancelled — the item list changed'); this.saveDraft(); });
+          },
+        },
+      };
+    });
+    const anyReduced = tot.retCount > 0;
+    const allZero = tot.keptCount === 0;
+    const allReasoned = tot.lines.every(l => {
+      if (l.returned <= 0) return true;
+      const r = s.reasons[l.id];
+      if (!r) return false;
+      if (r === 'other') return (s.otherTexts[l.id] || '').trim().length > 0;
+      return true;
+    });
+
+    // ---- S3 photo items (Continue only when EVERY flagged item has its photos) ----
+    const photoItems = tot.lines
+      .filter(l => l.returned > 0 && this.PHOTO_REASONS.includes(s.reasons[l.id]))
+      .map(l => {
+        const thumbs = (s.photos[l.id] || []).map((p, i) => ({
+          emoji: l.emoji, t: p.t,
+          onRemove: () => this.setState(st => {
+            const arr = [...(st.photos[l.id] || [])]; arr.splice(i, 1);
+            return { photos: { ...st.photos, [l.id]: arr } };
+          }, () => this.saveDraft()),
+        }));
+        return {
+          id: l.id, name: l.seq + ' · ' + l.name, emoji: l.emoji,
+          reasonLabel: (REASONS.find(r => r.id === s.reasons[l.id]) || {}).label || '',
+          countLabel: hi ? ('3 mein se ' + thumbs.length + ' · kam se kam 1') : (thumbs.length + ' of 3 · minimum 1'),
+          thumbs, canAdd: thumbs.length < 3, capturing: s.capturingId === l.id,
+          onCapture: () => {
+            if (s.capturingId) return;
+            this.setState({ capturingId: l.id });
+            setTimeout(() => this.setState(st => {
+              const arr = [...(st.photos[l.id] || [])];
+              if (arr.length < 3) arr.push({ t: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) });
+              return { photos: { ...st.photos, [l.id]: arr }, capturingId: null };
+            }, () => this.saveDraft()), 900);
+          },
+        };
+      });
+    const s3Ready = photoItems.length > 0 && photoItems.every(p => p.thumbs.length >= 1) && !s.capturingId;
+
+    // ---- S4 rows (price × qty, no allocations) ----
+    const eachStr = (p) => hi ? (this.fmt(p) + ' har ek') : (this.fmt(p) + ' each');
+    const keptRows = tot.lines.filter(l => l.kept > 0).map(l => ({
+      name: l.seq + ' · ' + l.name,
+      qtyStr: hi ? (l.qty + ' mein se ' + l.kept + ' rakha · ' + eachStr(l.price)) : ('kept ' + l.kept + ' of ' + l.qty + ' · ' + eachStr(l.price)),
+      net: this.fmt(l.net),
+    }));
+    const returnRows = tot.lines.filter(l => l.returned > 0).map(l => ({
+      name: l.seq + ' · ' + l.name,
+      qtyStr: hi ? (l.returned + ' wapas ja raha') : (l.returned + ' going back'),
+      reason: (REASONS.find(r => r.id === s.reasons[l.id]) || {}).label || '—',
+      amt: pod ? '₹0' : this.fmt(l.retNet),
+    }));
+    const amountHeroProps = pod
+      ? { amount: tot.payable, oldAmount: 1574, label: hi ? 'Customer dega' : 'Customer pays', onSeeCalculation: () => this.setState({ showBreakdown: true }) }
+      : { amount: tot.refund, label: hi ? 'GlowKart refund karega' : 'GlowKart refunds', onSeeCalculation: () => this.setState({ showBreakdown: true }) };
+    const revLabel = 'rev_0' + Math.max(1, s.revision);
+
+    // ---- breakdown rows ----
+    const breakdownRows = [
+      ...tot.lines.filter(l => l.kept > 0).map(l => ({
+        l: l.seq + ' · ' + l.name + ' ×' + l.kept + (hi ? ' rakha' : ' kept'), sub: eachStr(l.price),
+        v: this.fmt(l.net), c: 'var(--ink-900)', d: 'none',
+      })),
+      ...tot.lines.filter(l => l.returned > 0).map(l => ({
+        l: l.seq + ' · ' + l.name + ' ×' + l.returned + (hi ? ' wapas' : ' returned'),
+        sub: pod ? (hi ? 'Saket store wapas jayega' : 'goes back to Saket store') : (hi ? 'GlowKart refund karega' : 'refunded by GlowKart'),
+        v: pod ? '₹0' : this.fmt(l.retNet), c: 'var(--ink-400)', d: pod ? 'line-through' : 'none',
+      })),
+      ...(pod ? [
+        { l: hi ? 'Delivery fee — trip toh hui' : 'Delivery fee — the trip happened', sub: null, v: '₹49', c: 'var(--ink-900)', d: 'none' },
+        { l: hi ? 'COD fee — original order par thi' : 'COD fee — on the original order', sub: null, v: '₹25', c: 'var(--ink-900)', d: 'none' },
+      ] : [
+        { l: hi ? 'Fees refund nahi hoti' : 'Fees are not refunded', sub: hi ? 'delivery fee original order ke saath rehti hai' : 'delivery fee stays with the original order', v: '₹0', c: 'var(--ink-400)', d: 'none' },
+      ]),
+    ];
+
+    // ---- steppers ----
+    const stepNames = this.stepNames(hi);
+    const stepIdx = {
+      s2: 1,
+      s3: 2,
+      s4: stepNames.length - 2,
+      s5: stepNames.length - 1,
+      s6: stepNames.length, prepaidPay: stepNames.length,
+    };
+    const mkStepper = (scr) => ({ step: stepIdx[scr], total: stepNames.length, stepName: stepNames[stepIdx[scr] - 1] });
+
+    // ---- S5 ----
+    const otpWaiting = s.otp.sent && !s.otp.verified;
+    const resendLeft = s.otp.resendReadyAt ? Math.max(0, Math.ceil((s.otp.resendReadyAt - Date.now()) / 1000)) : 0;
+    const resendGated = otpWaiting && resendLeft > 0;
+    const canResend = otpWaiting && resendLeft === 0;
+    const consentAmountStr = pod ? payableStr : (hi ? refundStr + ' brand refund' : 'a ' + refundStr + ' brand refund');
+    const s5Desc = hi
+      ? (customerPhone + ' par SMS + WhatsApp gaya hai. Message mein ' + keptSummary + ' aur ' + consentAmountStr + ' likha hai — approve customer karta hai, aap nahi.')
+      : ('Sent by SMS + WhatsApp to ' + customerPhone + '. The message lists the ' + keptSummary + ' and ' + consentAmountStr + ' — the customer approves, not you.');
+    const otpProps = {
+      length: 4, value: s.otp.value, error: s.otp.error,
+      onChange: (v) => {
+        const val = String(v).replace(/\D/g, '').slice(0, 4);
+        this.setState(st => ({ otp: { ...st.otp, value: val, error: false } }));
+        if (val.length === 4) {
+          setTimeout(() => {
+            const st = this.state; if (st.otp.value !== val || st.otp.verified) return;
+            if (val === '4821') {
+              this.setState({ otp: { ...st.otp, verified: true, by: 'otp', error: false } });
+              setTimeout(() => this.afterConsent(), 1100);
+            } else {
+              this.setState({ otp: { ...st.otp, value: '', error: true, attempts: st.otp.attempts + 1 } });
+            }
+          }, 400);
+        }
+      },
+    };
+    const attemptsLeft = Math.max(0, 5 - s.otp.attempts);
+    const wrongCodeMsg = hi ? ('Galat code — ' + attemptsLeft + ' attempts bache') : ('Wrong code — ' + attemptsLeft + ' attempts left');
+
+    // ---- S6 ----
+    const q = s.qr;
+    const qrSecondsLeft = q ? Math.max(0, Math.ceil((q.expiresAt - Date.now()) / 1000)) : 0;
+    const qrWaiting = !!q && q.status === 'waiting' && s.payTab === 'qr';
+    const qrPaid = !!q && q.status === 'paid';
+    const qrVerifying = !!q && q.status === 'verifying';
+    const verifyLeftStr = this.mmss(q && q.verifyUntil ? Math.max(0, Math.ceil((q.verifyUntil - Date.now()) / 1000)) : 0);
+    const qrProps = q ? {
+      amount: tot.payable, secondsLeft: qrSecondsLeft, totalSeconds: q.total,
+      expired: q.status === 'expired', regensLeft: q.regensLeft,
+      onRegenerate: () => {
+        if (!q || q.regensLeft <= 0) { this.toast(hi ? 'Regeneration nahi bachi — cash lein' : 'No regenerations left — switch to cash'); return; }
+        this.newQr(q.regensLeft - 1); this.toast(hi ? 'Naya QR — purana void ho gaya' : 'New QR — the old one is void');
+      },
+      onCheckStatus: () => {
+        if (q.status === 'paid') return;
+        this.toast(hi ? 'PSP: abhi payment nahi aayi — customer se scan karwayein' : 'PSP: payment not received yet — ask the customer to scan');
+      },
+    } : {};
+    const showQrRing = !!q && q.status === 'waiting';
+    const ringProps = q ? { total: q.total, remaining: qrSecondsLeft, size: 56 } : {};
+    const qrPaidMsg = hi ? (payableStr + ' UPI se mila · UTR 4156 3228 1175') : ('Paid ' + payableStr + ' by UPI · UTR 4156 3228 1175');
+    const verifyMsg = hi
+      ? ('Payment reference match nahi hua. ' + verifyLeftStr + ' mein hal na ho toh QR void karke cash lein — ya full RTO. Pending payment par saaman kabhi nahi jata.')
+      : ("A payment reference doesn't match. If unresolved in " + verifyLeftStr + ', void the QR and collect cash — or convert to full RTO. Goods never leave on a pending payment.');
+    const qrMetaStr = hi ? ('QR amount-locked hai · ' + orderId + ' tagged · ' + revLabel) : ('QR is amount-locked · tagged ' + orderId + ' · ' + revLabel);
+
+    // Cash tab states (R2.4: switching to cash runs the PSP check + void — no stray "void QR" button)
+    const cashChecking = s.voiding && s.payTab === 'cash';
+    const cashVerifyLocked = !cashChecking && !!q && q.status === 'verifying';
+    const cashFree = !cashChecking && !cashVerifyLocked && !(q && q.status === 'paid');
+    const cashConfirmProps = { amount: tot.payable, onConfirm: () => this.finishPayment('cash') };
+    const cashLockedProps = { amount: tot.payable, lockedFor: verifyLeftStr };
+    const tender = Math.ceil((tot.payable + 1) / 100) * 100;
+    const change = tender - tot.payable;
+    const cashChangeNote = hi
+      ? ('Change dena theek hai (' + this.fmt(tender) + ' → ' + this.fmt(change) + ' wapas). Darwaze par refund kabhi nahi hota.')
+      : ('Normal change is fine (' + this.fmt(tender) + ' → ' + this.fmt(change) + ' back). Refunds at the door never happen.');
+    const paymentTabsProps = {
+      active: s.payTab,
+      onChange: (tab) => {
+        const cq = this.state.qr;
+        if (tab === 'cash' && cq && cq.status === 'paid') { this.toast(hi ? 'Payment UPI se aa chuki hai' : 'Payment already received by UPI'); return; }
+        if (tab === 'cash' && cq && cq.active && cq.status === 'waiting') {
+          this.setState({ payTab: 'cash', voiding: true });
+          setTimeout(() => {
+            this.setState({ voiding: false, qr: null });
+            this.toast(hi ? 'PSP confirm: payment nahi aayi — QR void, cash lein' : 'PSP confirmed not paid — QR voided, collect cash');
+          }, 1400);
+          return;
+        }
+        this.setState({ payTab: tab });
+      },
+    };
+    const cantPayTitle = hi ? ('Customer ' + payableStr + ' nahi de sakta') : ("Customer can't pay " + payableStr);
+
+    // ---- prepaid ----
+    const prepaidRefundDesc = hi
+      ? ('GlowKart customer ko 3–5 din mein ' + refundStr + ' refund karega — wapas hue items ki value. Fees refund nahi hoti.')
+      : ('GlowKart will refund ' + refundStr + ' to the customer in 3–5 days — the value of the returned items. Fees aren\'t refunded.');
+    const prepaidInfoNote = hi
+      ? ('Online paid ' + prepaidPaidStr + ' → naya order value ' + this.fmt(tot.merch + 49) + '. Refund GlowKart karega — rider kabhi nahi.')
+      : ('Paid online ' + prepaidPaidStr + ' → new order value ' + this.fmt(tot.merch + 49) + '. GlowKart executes the refund — never the rider.');
+    const serverNote = hi
+      ? ('Server ne calculate kiya · ' + revLabel + ' · audit ke liye frozen — app kabhi hisaab nahi karta')
+      : ('Calculated by the server · ' + revLabel + ' · frozen for audit — the app never does math');
+    const feesNote = pod
+      ? (hi ? 'Delivery aur COD fees waise hi — trip toh hui. Sabhi amounts sirf display ke liye.' : 'Delivery & COD fees unchanged — the trip happened. All amounts display-only.')
+      : (hi ? 'Delivery fee waise hi — trip toh hui. Sabhi amounts sirf display ke liye.' : 'Delivery fee unchanged — the trip happened. All amounts display-only.');
+
+    // ---- S7 / success ----
+    const consentLabel = s.otp.by === 'signature' ? (hi ? 'signature se approved' : 'approved by signature') : (hi ? 'OTP se approved' : 'approved by OTP');
+    const paidRowText = s.payMode === 'cash'
+      ? (hi ? (payableStr + ' cash mila — aapke float mein juda') : ('Collected ' + payableStr + ' in cash — added to your float'))
+      : s.payMode === 'upi'
+        ? qrPaidMsg
+        : (hi ? ('Kuch lena nahi tha — GlowKart ' + refundStr + ' refund karega') : ('Nothing collected — GlowKart refunds ' + refundStr));
+    const handoverNote = hi
+      ? (tot.retCount + ' return items Saket dark store par dein — existing RTO receiving se jayenge. Store ke receipt confirm karte hi aapki ₹' + returnFee + ' return fee release hogi.')
+      : ('Hand the ' + tot.retCount + ' return items at Saket dark store — they go through the existing RTO receiving. Your ₹' + returnFee + ' return fee releases when the store confirms receipt.');
+    const successStats = [
+      { type: 'delivered', text: hi ? (tot.keptCount + ' items deliver hue · ' + consentLabel) : (tot.keptCount + ' items delivered · ' + consentLabel) },
+      { type: 'returned', text: hi ? (tot.retCount + ' items Saket store wapas ja rahe') : (tot.retCount + ' items going back to Saket store') },
+      { type: 'cash', text: s.payMode === 'cash'
+        ? (hi ? (payableStr + ' cash float mein juda') : (payableStr + ' added to your cash float'))
+        : s.payMode === 'upi'
+          ? (hi ? (payableStr + ' UPI se · auto-match hua') : ('Paid ' + payableStr + ' by UPI · auto-matched'))
+          : (hi ? ('GlowKart 3–5 din mein ' + refundStr + ' refund karega') : ('GlowKart refunds ' + refundStr + ' in 3–5 days')) },
+    ];
+    const successProps = {
+      title: hi ? 'Partial delivery poori hui' : 'Partial delivery complete', stats: successStats,
+      earnedNow: pod ? 58 : 52, pendingAmount: returnFee,
+      pendingCondition: hi ? 'aur jab Saket store return receipt confirm kare' : 'more when Saket store confirms the return receipt',
+    };
+    const successFooter = hi
+      ? 'Receipt gayi · GlowKart ko khabar · route ETA update — sab 60 s ke andar'
+      : 'Receipt sent · GlowKart notified · route ETAs updated — all within 60 s';
+    const returnTaskProps = {
+      variant: 'return',
+      title: hi ? (tot.retCount + ' items Saket dark store wapas le jaayein') : ('Return ' + tot.retCount + ' items to Saket dark store'),
+      address: hi ? 'Isi shift mein handover · existing RTO receiving' : 'Same-shift handover · existing RTO receiving',
+      distance: '3.1 km', payout: returnFee, countdown: '3 h 58 m',
+      onClick: () => this.toast(hi ? 'Return task — store jaate waqt khulega' : 'Return task — opens when you head to the store'),
+    };
+
+    // ---- home ----
+    const draft = s.draftInfo;
+    const stepLabelMap = hi
+      ? { s2: 'Step 1 — Items chunein', s3: 'Photos', s4: 'Naya bill', s5: 'Customer approval', s6: 'Payment', prepaidPay: 'Refund', s7: 'Finish' }
+      : { s2: 'Step 1 — Adjust items', s3: 'Photos', s4: 'Review', s5: 'Customer approval', s6: 'Payment', prepaidPay: 'Refund', s7: 'Finish' };
+    const showPodTask = !s.donePod, showPrepaidTask = !s.donePrepaid, showReturnTask = s.returnTask;
+    const taskCount = (showPodTask ? 1 : 0) + (showPrepaidTask ? 1 : 0) + (showReturnTask ? 1 : 0);
+    const routeLabel = hi
+      ? ('Aaj ka route · ' + taskCount + ' task' + (taskCount === 1 ? '' : 's'))
+      : ("Today's route · " + taskCount + ' task' + (taskCount === 1 ? '' : 's'));
+
+    const appBar = (title, onBack) => ({ title, onBack, onHelp: () => this.setState({ showHelp: true }) });
+    const setLang = (v) => { this.setState({ lang: v }); try { localStorage.setItem(this.LANG_KEY, v); } catch (e) {} };
+
+    // ---- scenario switcher (published page chrome, EN) ----
+    const curQ = (() => { try { return location.search.replace(/^\?/, ''); } catch (e) { return ''; } })();
+    const scenarios = [
+      { label: 'Happy path', q: '' },
+      { label: 'GPS drift 400 m', q: 'gps=drift_300m_1km' },
+      { label: 'Too far (1.2 km)', q: 'gps=beyond_1km' },
+      { label: 'Offline', q: 'offline=1' },
+      { label: 'UPI never paid', q: 'upi=never_pays&fast=1' },
+      { label: 'UPI under verification', q: 'upi=under_verification&fast=1' },
+    ].map(sc => {
+      const on = sc.q === curQ;
+      return { label: sc.label, href: sc.q ? '?' + sc.q : './', bg: on ? '#241E27' : '#FFFFFF', fg: on ? '#FFFFFF' : '#4A4150', bd: on ? '#241E27' : '#E2DCE6' };
+    });
+
+    return {
+      // shell
+      flowChips, offline, t, scenarios,
+      // screens
+      isHome: s.screen === 'home', isS1: s.screen === 's1', isS2: s.screen === 's2', isS3: s.screen === 's3',
+      isS4: s.screen === 's4', isS5: s.screen === 's5', isS6: s.screen === 's6',
+      isPrepaidPay: s.screen === 'prepaidPay', isS7: s.screen === 's7', isSuccess: s.screen === 'success', isRto: s.screen === 'rto',
+      // home
+      cashChipProps: { amount: s.cashInHand, onClick: () => this.toast(hi ? 'Cash float — din ke ant mein hamesha ki tarah deposit karein' : 'Cash float — deposit at end of day as usual') },
+      showBagBadge: s.returnTask,
+      bagBadgeProps: { countdown: '3 h 58 m', onClick: () => this.toast(hi ? 'Return items — isi shift mein Saket store par dein' : 'Return items — hand over at Saket store within the shift') },
+      hasDraft: !!draft && s.screen === 'home',
+      resumeProps: draft ? {
+        orderId: draft.orderType === 'pod' ? '#Z-4821' : '#Z-4790',
+        stepLabel: hi
+          ? ('Aap ' + (stepLabelMap[draft.screen] || 'flow') + ' par the — server ne draft save rakha')
+          : ('You were on ' + (stepLabelMap[draft.screen] || 'the flow') + ' — the server kept your draft'),
+        onResume: () => this.resume(),
+      } : {},
+      routeLabel,
+      langEnBg: !hi ? 'var(--zip-purple-600)' : 'transparent',
+      langEnFg: !hi ? '#FFFFFF' : 'var(--ink-600)',
+      langHiBg: hi ? 'var(--zip-purple-600)' : 'transparent',
+      langHiFg: hi ? '#FFFFFF' : 'var(--ink-600)',
+      setLangEn: () => setLang('en'),
+      setLangHi: () => setLang('hi'),
+      showPodTask, showPrepaidTask, showReturnTask,
+      podTaskProps: {
+        variant: 'delivery',
+        title: hi ? '5 items deliver karein · ₹1,574 collect karein' : 'Deliver 5 items · collect ₹1,574',
+        address: 'Ananya Sharma · A-14 Green Park Extn',
+        distance: '2.4 km', payout: 58, onClick: () => this.setState({ orderType: 'pod', screen: 's1' }),
+      },
+      prepaidTaskProps: {
+        variant: 'delivery',
+        title: hi ? '5 items deliver karein · prepaid' : 'Deliver 5 items · prepaid',
+        address: 'Rohan Mehta · C-9 Hauz Khas Village',
+        distance: '4.0 km', payout: 52, onClick: () => this.setState({ orderType: 'prepaid', screen: 's1' }),
+      },
+      returnTaskProps,
+      // s1
+      appBarS1: appBar((hi ? 'Order ' : 'Order ') + orderId, () => this.setState({ screen: 'home' })),
+      orderId, customerName, customerAddr, customerPhone,
+      geoOk, geoDriftPending, geoOverridden, geoFar,
+      geoOverride: () => { this.setState({ geoOverridden: true }); this.toast(hi ? 'Override record hua — audit ke liye flagged' : 'Override recorded — flagged for audit'); },
+      helpCall: () => this.toast(hi ? 'Ops control room ko call ho raha hai…' : 'Calling ops control room…'),
+      callCustomer: () => this.toast(hi ? (customerName + ' ko call ho raha hai…') : ('Calling ' + customerName + '…')),
+      s1Rows,
+      s1TotalLabel: pod ? (hi ? 'Darwaze par collect karein' : 'Collect at the door') : (hi ? 'Online paid ho chuka' : 'Paid online'),
+      s1TotalValue: pod ? podOriginalStr : prepaidPaidStr,
+      payPill: pod ? 'POD · cash or UPI' : 'PREPAID',
+      payPillBg: pod ? 'var(--warn-50)' : 'var(--success-50)',
+      payPillFg: pod ? 'var(--warn-600)' : 'var(--success-700)',
+      showPartialBtn, hidePartialBtn: !showPartialBtn,
+      onDeliverAll: () => this.toast(hi ? 'Existing full-delivery flow — is prototype ke bahar' : 'Existing full-delivery flow — outside this prototype'),
+      startPartial: () => this.setState({
+        counts: { a: 2, b: 1, c: 2 }, reasons: {}, otherTexts: {}, photos: {}, otp: this.freshOtp(),
+        qr: null, payTab: 'qr', revision: 0, calcDirty: true, podPhoto: false, payMode: null, screen: 's2',
+      }, () => this.saveDraft()),
+      // s2
+      appBarS2: appBar('Order ' + orderId, () => this.setState({ screen: 's1' })),
+      stepperS2: mkStepper('s2'),
+      adjustItems,
+      deliveringChip: (hi ? 'Deliver ho rahe ' : 'Delivering ') + tot.keptCount,
+      returningChip: (hi ? 'Wapas ja rahe ' : 'Returning ') + tot.retCount,
+      s2CtaContinue: anyReduced && !allZero && allReasoned,
+      s2CtaRto: allZero,
+      s2CtaNeedReason: anyReduced && !allZero && !allReasoned,
+      s2CtaNoReduction: !anyReduced,
+      goS2Continue: () => {
+        if (this.needsPhotos()) this.setState({ screen: 's3' }, () => this.saveDraft());
+        else this.enterS4();
+      },
+      goRtoFromS2: () => this.setState({ rtoFrom: 's2', screen: 'rto' }),
+      // s3
+      appBarS3: appBar('Order ' + orderId, () => this.setState({ screen: 's2' })),
+      stepperS3: mkStepper('s3'),
+      photoItems, s3Ready, s3NotReady: !s3Ready,
+      goS4: () => this.enterS4(),
+      // s4
+      appBarS4: appBar('Order ' + orderId, () => this.setState({ screen: this.needsPhotos() ? 's3' : 's2' })),
+      stepperS4: mkStepper('s4'),
+      calculating: s.calculating, calcReady: !s.calculating,
+      amountHeroProps, serverNote,
+      isPrepaidFlow: !pod, prepaidInfoNote,
+      keptHeader: (hi ? 'DELIVER HO RAHE (' : 'DELIVERING (') + tot.keptCount + ')',
+      returnHeader: (hi ? 'WAPAS JA RAHE (' : 'RETURNING (') + tot.retCount + ')',
+      keptRows, returnRows, feesNote,
+      sendOtp: () => this.setState({
+        screen: 's5',
+        otp: { ...this.freshOtp(), sent: true, resendReadyAt: Date.now() + this.resendTotal() * 1000 },
+      }, () => this.saveDraft()),
+      // s5
+      appBarS5: appBar('Order ' + orderId, () => this.setState({ screen: 's4' })),
+      stepperS5: mkStepper('s5'),
+      s5Desc, otpProps,
+      otpError: s.otp.error, wrongCodeMsg, otpVerified: s.otp.verified, otpWaiting,
+      resendGated, canResend,
+      resendTimerLabel: (hi ? 'Resend ' : 'Resend in ') + this.mmss(resendLeft) + (hi ? ' mein' : ''),
+      resendOtp: () => { this.setState(st => ({ otp: { ...st.otp, resendReadyAt: Date.now() + this.resendTotal() * 1000, rounds: st.otp.rounds + 1 } })); this.toast(hi ? 'OTP dobara gaya — SMS + WhatsApp' : 'OTP re-sent on SMS + WhatsApp'); },
+      showVoice: canResend && s.otp.rounds >= 1,
+      voiceOtp: () => { this.setState(st => ({ otp: { ...st.otp, resendReadyAt: Date.now() + this.resendTotal() * 1000, rounds: st.otp.rounds + 1 } })); this.toast(hi ? 'Voice call lagi — OTP suna diya jayega' : 'Voice call placed — OTP read aloud'); },
+      showSigOption: otpWaiting && (s.otp.rounds >= 2 || s.otp.attempts >= 3),
+      openSig: () => this.setState({ showSig: true, sigHas: false }),
+      // signature sheet
+      showSig: s.showSig, sigHas: s.sigHas, sigEmpty: !s.sigHas,
+      sigDesc: hi
+        ? ('Customer sign karke ' + keptSummary + ' rakhna approve karta hai — ' + consentAmountStr + ' par. Signatures sample-audit hote hain.')
+        : ('The customer signs to approve keeping ' + keptSummary + ' for ' + consentAmountStr + '. Signatures are sample-audited.'),
+      closeSig: () => this.setState({ showSig: false }),
+      clearSig: () => { if (this._sigCtx && this._sig) { this._sigCtx.clearRect(0, 0, this._sig.width, this._sig.height); } this.setState({ sigHas: false }); },
+      confirmSig: () => {
+        this.setState(st => ({ showSig: false, otp: { ...st.otp, verified: true, by: 'signature' } }));
+        setTimeout(() => this.afterConsent(), 800);
+      },
+      sigRef: (el) => {
+        this._sig = el;
+        if (el && !el._init) {
+          el._init = true; el.width = 326; el.height = 150;
+          const ctx = el.getContext('2d');
+          ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#241E27';
+          this._sigCtx = ctx;
+        }
+      },
+      sigDown: (e) => { this._drawing = true; const r = e.target.getBoundingClientRect(); this._sigCtx.beginPath(); this._sigCtx.moveTo(e.clientX - r.left, e.clientY - r.top); },
+      sigMove: (e) => {
+        if (!this._drawing || !this._sigCtx) return;
+        const r = e.target.getBoundingClientRect();
+        this._sigCtx.lineTo(e.clientX - r.left, e.clientY - r.top); this._sigCtx.stroke();
+        if (!this.state.sigHas) this.setState({ sigHas: true });
+      },
+      sigUp: () => { this._drawing = false; },
+      // s6
+      appBarS6: appBar('Order ' + orderId, qrPaid ? undefined : () => this.setState({ screen: 's4', qr: null })),
+      stepperS6: mkStepper(pod ? 's6' : 'prepaidPay'),
+      paymentTabsProps,
+      showQrTab: s.payTab === 'qr', showCashTab: s.payTab === 'cash',
+      showQrPanel: !!q, qrGone: !q,
+      qrProps, qrWaiting, qrPaid, qrVerifying, qrPaidMsg, verifyMsg, qrMetaStr,
+      showQrRing, ringProps,
+      regenerateQr: () => { this.newQr(3); this.toast(hi ? ('QR bana — ' + payableStr + ' par lock') : ('QR generated — amount-locked to ' + payableStr)); },
+      voidQr: () => {
+        this.setState({ voiding: true });
+        setTimeout(() => { this.setState({ voiding: false, qr: null, payTab: 'cash' }); this.toast(hi ? 'PSP confirm: payment nahi aayi — QR void, cash lein' : 'PSP confirmed not paid — QR voided, collect cash'); }, 1400);
+      },
+      voiding: s.voiding,
+      cashChecking, cashVerifyLocked, cashFree,
+      cashConfirmProps, cashLockedProps, cashChangeNote,
+      openCantPay: () => this.setState({ showCantPay: true }),
+      closeCantPay: () => this.setState({ showCantPay: false }),
+      showCantPay: s.showCantPay, cantPayTitle,
+      returnMore: () => {
+        this.setState({ showCantPay: false, screen: 's2', qr: null }, () => { this.maybeKillOtp(hi ? 'OTP cancel — item list badal gayi' : 'OTP cancelled — the item list changed'); this.saveDraft(); });
+      },
+      convertRto: () => this.setState({ showCantPay: false, rtoFrom: 's6', screen: 'rto', qr: null }),
+      // prepaid pay
+      refundStr, prepaidRefundDesc,
+      prepaidContinue: () => this.setState({ screen: 's7', payMode: 'prepaid' }, () => this.saveDraft()),
+      // s7 — no back once you reach "Finish the return" (payment/consent is final)
+      appBarS7: { title: 'Order ' + orderId, onHelp: () => this.setState({ showHelp: true }) },
+      paidRow: !!s.payMode, paidRowText,
+      podPhoto: s.podPhoto, podPhotoPending: !s.podPhoto, podCapturing: s.podCapturing,
+      podCapture: () => {
+        this.setState({ podCapturing: true });
+        setTimeout(() => this.setState({ podPhoto: true, podCapturing: false }, () => this.saveDraft()), 900);
+      },
+      handoverNote,
+      s7Ready: s.podPhoto, s7NotReady: !s.podPhoto,
+      completeDelivery: () => {
+        this.clearDraft();
+        this.setState(st => ({
+          screen: 'success', returnTask: true,
+          donePod: pod ? true : st.donePod, donePrepaid: !pod ? true : st.donePrepaid,
+        }));
+      },
+      // success
+      successProps, successFooter,
+      backToRoute: () => this.setState({ screen: 'home' }),
+      // rto
+      appBarRto: appBar('Order ' + orderId, undefined),
+      rtoCancel: () => this.setState({ screen: s.rtoFrom }),
+      rtoConfirm: () => { this.clearDraft(); this.toast(hi ? 'Existing RTO flow ko de diya' : 'Handed off to the existing RTO flow'); this.setState({ screen: 'home' }); },
+      // breakdown
+      showBreakdown: s.showBreakdown,
+      closeBreakdown: () => this.setState({ showBreakdown: false }),
+      breakdownTitle: pod
+        ? (hi ? (payableStr + ' kaise bana') : ('How ' + payableStr + ' was calculated'))
+        : (hi ? (refundStr + ' refund kaise bana') : ('How the ' + refundStr + ' refund was calculated')),
+      breakdownServerNote: hi
+        ? ('Server ka hisaab · ' + revLabel + ' · audit ke liye frozen')
+        : ('Server calculation · ' + revLabel + ' · inputs and outputs frozen for audit'),
+      breakdownRows,
+      breakdownTotalLabel: pod ? (hi ? 'Customer dega' : 'Customer pays') : (hi ? 'GlowKart refund karega' : 'GlowKart refunds'),
+      breakdownTotalValue: pod ? payableStr : refundStr,
+      // help / toast
+      showHelp: s.showHelp,
+      closeHelp: () => this.setState({ showHelp: false }),
+      showToast: !!s.toast, toastMsg: s.toast || '',
+    };
+  }
+
+  enterS4() {
+    this.setState(s => ({
+      screen: 's4', calculating: true,
+      revision: s.calcDirty ? s.revision + 1 : Math.max(1, s.revision),
+      calcDirty: false,
+    }), () => {
+      this.saveDraft();
+      setTimeout(() => this.setState({ calculating: false }), 750);
+    });
+  }
+
+  afterConsent() {
+    if (this.state.orderType === 'prepaid') {
+      this.setState({ screen: 'prepaidPay' }, () => this.saveDraft());
+    } else {
+      this.setState({ screen: 's6', payTab: 'qr' }, () => { this.saveDraft(); this.newQr(3); });
+    }
+  }
+}
+</script>
+</body>
+</html>
