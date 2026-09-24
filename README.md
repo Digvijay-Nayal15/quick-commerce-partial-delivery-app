@@ -41,5 +41,5 @@ or you can set them in the URL:
 `fast=1` shortens the QR and OTP timers so the edge cases show up within seconds.
 Demo OTP: `4821`.
 
-React, ReactDOM and Babel are shipped in `prototype/vendor/` so the page doesn't depend on a
+React and ReactDOM are shipped in `prototype/vendor/` so the page doesn't depend on a
 third-party CDN at runtime.
