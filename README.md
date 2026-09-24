@@ -7,6 +7,8 @@ research, PRD, design system, clickable prototype and an AI-run audit.
 Built as a product assignment for Zippee (quick-commerce logistics for D2C brands), July 2026.
 By **Digvijay Singh Nayal**, Product Manager.
 
+**Live:** https://digvijay-partial-delivery.vercel.app · prototype: https://digvijay-partial-delivery.vercel.app/prototype/
+
 ## What's here
 
 | Path | What it is |
