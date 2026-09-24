@@ -1,0 +1,26 @@
+# Rider Partial Delivery: an AI-native PM case study
+
+A customer ordered 5 items on cash-on-delivery. At the door they say "I only want 3."
+This project designs how the rider completes that delivery, and gets it ready for development:
+research, PRD, design system, clickable prototype and an AI-run audit.
+
+Built as a product assignment for Zippee (quick-commerce logistics for D2C brands), July 2026.
+By **Digvijay Singh Nayal**, Product Manager.
+
+## What's here
+
+| Path | What it is |
+| --- | --- |
+| `index.html` | Case study page: problem, the five-stage AI pipeline, key decisions, what the audit caught |
+| `prototype/` | Clickable rider-app prototype (S1 to S7, Home, Success, RTO) |
+| `assets/Digvijay_AI_PM_Case_Study.pdf` | The 5-page case study PDF |
+
+## Run it locally
+
+It's a static site, no build step:
+
+```bash
+npx serve .
+```
+
+Then open http://localhost:3000.

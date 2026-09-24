@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partial Delivery Case Study</title>
+<meta name="description" content="How I took a one-line brief to a dev-ready payments feature for a quick-commerce rider app, with AI working as my product team. Case study by Digvijay Singh Nayal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f4f9;
+    --surface-2: #f2e6f2;
+    --text: #17151c;
+    --muted: #5d5a66;
+    --faint: #8a8794;
+    --line: #e4e1ea;
+    --accent: #7a2b86;
+    --accent-soft: #f3e3f4;
+    --dark: #1b1a20;
+    --dark-text: #f4f2f7;
+    --red: #b42318;
+    --red-soft: #fde8e7;
+    --amber: #a15c07;
+    --amber-soft: #fdf1dc;
+    --green: #177a3c;
+    --green-soft: #e5f5eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121117;
+      --surface: #1c1a22;
+      --surface-2: #261d2a;
+      --text: #efedf3;
+      --muted: #b0acba;
+      --faint: #8a8695;
+      --line: #2e2b36;
+      --accent: #d59ce0;
+      --accent-soft: #3a2340;
+      --dark: #0b0a0e;
+      --dark-text: #f4f2f7;
+      --red: #ff9b92;
+      --red-soft: #3b1d1b;
+      --amber: #f3c16f;
+      --amber-soft: #3a2c15;
+      --green: #7fdc9f;
+      --green-soft: #173222;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121117; --surface: #1c1a22; --surface-2: #261d2a; --text: #efedf3; --muted: #b0acba;
+    --faint: #8a8695; --line: #2e2b36; --accent: #d59ce0; --accent-soft: #3a2340; --dark: #0b0a0e;
+    --dark-text: #f4f2f7; --red: #ff9b92; --red-soft: #3b1d1b; --amber: #f3c16f; --amber-soft: #3a2c15;
+    --green: #7fdc9f; --green-soft: #173222;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 720px) { .wrap { padding: 0 32px; } }
+
+  /* Top bar */
+  .top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; }
+  .top .name { font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .top nav { display: flex; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px;
+    padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 15px; text-decoration: none;
+    border: 1px solid var(--line); color: var(--text); background: var(--bg); white-space: nowrap; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  :root[data-theme="dark"] .btn.primary { color: #1b1020; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #1b1020; } }
+  .top .btn { min-height: 38px; padding: 0 14px; font-size: 14px; }
+  @media (max-width: 520px) { .top .btn.ghost-sm { display: none; } }
+
+  /* Hero */
+  .eyebrow { color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 12px; }
+  header.hero { padding: 48px 0 24px; }
+  h1 { font-size: clamp(30px, 5.4vw, 52px); line-height: 1.08; letter-spacing: -.02em; margin: 0 0 16px; font-weight: 800; }
+  .byline { color: var(--muted); font-size: 15px; margin: 0 0 4px; }
+  .byline b { color: var(--text); }
+  .lede { font-size: clamp(17px, 2.2vw, 20px); color: var(--muted); max-width: 820px; margin: 24px 0 0; }
+  .lede b { color: var(--text); }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 36px 0 0; }
+  .stat { background: var(--surface); border-radius: 14px; padding: 18px; }
+  .stat .n { font-size: 34px; font-weight: 800; color: var(--accent); line-height: 1.1; letter-spacing: -.02em; }
+  .stat p { margin: 6px 0 0; font-size: 14px; color: var(--muted); line-height: 1.45; }
+
+  .pair { display: grid; gap: 16px; margin-top: 24px; }
+  @media (min-width: 760px) { .pair { grid-template-columns: 1fr 1fr; } }
+  .card { background: var(--surface); border-radius: 14px; padding: 22px; }
+  .card h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .card p { margin: 0; font-size: 17px; }
+
+  /* Sections */
+  section { padding: 56px 0 8px; }
+  h2 { font-size: clamp(24px, 3.6vw, 32px); letter-spacing: -.015em; line-height: 1.2; margin: 0 0 8px; }
+  h2 .num { color: var(--accent); margin-right: 8px; }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 780px; }
+  h4 { font-size: 18px; margin: 32px 0 12px; }
+
+  /* Tables → stacked on mobile */
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { text-align: left; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint);
+    font-weight: 600; padding: 10px 12px; border-bottom: 2px solid var(--text); }
+  td { padding: 14px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-weight: 600; }
+  @media (max-width: 720px) {
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border-bottom: 1px solid var(--line); padding: 12px 0; }
+    td { border: 0; padding: 4px 0; }
+    td[data-l]::before { content: attr(data-l); display: block; font-size: 11px; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--faint); font-weight: 600; margin-top: 6px; }
+  }
+
+  .insight { border-left: 4px solid var(--accent); padding: 4px 0 4px 18px; margin: 32px 0 8px;
+    font-size: clamp(17px, 2.2vw, 20px); font-weight: 600; }
+  .insight em { font-style: normal; color: var(--accent); }
+  .note { color: var(--faint); font-size: 14px; margin: 8px 0 0; }
+
+  /* Flow strip */
+  .flow { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .flow { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 960px) { .flow { grid-template-columns: repeat(5, 1fr); } }
+  .step { border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .step .k { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--accent); text-transform: uppercase; }
+  .step b { display: block; margin: 4px 0 6px; }
+  .step p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+  /* Money math */
+  .math { display: grid; gap: 16px; margin-top: 8px; grid-template-columns: minmax(0, 1fr); }
+  .math > * { min-width: 0; }
+  @media (min-width: 820px) { .math { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; } }
+  pre { margin: 0; background: var(--surface); border-radius: 12px; padding: 18px; overflow-x: auto;
+    font: 14px/1.7 "JetBrains Mono", ui-monospace, monospace; }
+  .qr-card { border: 1px solid var(--line); border-radius: 14px; padding: 20px; text-align: center; }
+  .qr-card small { color: var(--muted); }
+  .qr-card .amt { font-size: 40px; font-weight: 800; margin: 2px 0 10px; letter-spacing: -.02em; }
+  .qr-card .row { display: flex; justify-content: center; align-items: center; gap: 14px; }
+  .qr-card svg.qr { width: 132px; height: 132px; border-radius: 6px; background: #fff; padding: 6px; }
+  .ring { width: 58px; height: 58px; position: relative; }
+  .ring span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .qr-card .wait { margin-top: 12px; color: var(--muted); font-size: 13px; }
+
+  /* Pipeline */
+  .pipe { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .pipe { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 960px) { .pipe { grid-template-columns: repeat(5, 1fr); } }
+  .pipe .step { background: var(--surface); border: 0; }
+  .dot { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; }
+  :root[data-theme="dark"] .dot { color: #1b1020; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dot { color: #1b1020; } }
+  .loop { margin-top: 10px; border: 1px dashed var(--accent); border-radius: 12px; padding: 12px 16px;
+    font-size: 14px; color: var(--accent); text-align: center; }
+
+  .rules { display: grid; gap: 16px; margin-top: 28px; }
+  @media (min-width: 820px) { .rules { grid-template-columns: 1.5fr 1fr; align-items: start; } }
+  .rules .card { background: var(--surface-2); }
+  ol.nice { list-style: none; counter-reset: r; padding: 0; margin: 12px 0 0; }
+  ol.nice li { counter-increment: r; position: relative; padding-left: 38px; margin: 0 0 14px; font-size: 15px; }
+  ol.nice li::before { content: counter(r); position: absolute; left: 0; top: 0; width: 26px; height: 26px;
+    border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+
+  .success { border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  .success .tick { width: 52px; height: 52px; border-radius: 50%; background: var(--green-soft); color: var(--green);
+    display: grid; place-items: center; margin: 0 auto 10px; font-size: 26px; font-weight: 700; }
+  .success h5 { text-align: center; font-size: 19px; margin: 0 0 14px; }
+  .success ul { list-style: none; padding: 0; margin: 0 0 14px; font-size: 14px; }
+  .success li { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .success li i { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-style: normal; font-size: 13px; }
+  .earned { background: var(--green-soft); border-radius: 10px; padding: 12px 14px; }
+  .earned b { color: var(--green); font-size: 17px; }
+  .earned p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+  .caption { color: var(--faint); font-size: 13px; margin: 10px 0 0; }
+
+  .tag { display: inline-block; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700;
+    letter-spacing: .05em; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .sev { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    background: var(--red-soft); color: var(--red); }
+  .sev.h { background: var(--amber-soft); color: var(--amber); }
+
+  .grid2 { display: grid; gap: 16px; margin-top: 24px; }
+  @media (min-width: 760px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+  ul.bul { padding-left: 20px; margin: 8px 0 0; }
+  ul.bul li { margin-bottom: 8px; font-size: 15px; }
+  ul.bul li::marker { color: var(--accent); }
+  .card h4 { margin: 0 0 4px; }
+
+  .learned { background: var(--surface-2); }
+  .razorpay { background: var(--dark); color: var(--dark-text); border-radius: 18px; padding: 32px 24px; margin: 56px 0 0; }
+  @media (min-width: 720px) { .razorpay { padding: 40px; } }
+  .razorpay .eyebrow { color: #e3b3ea; }
+  .razorpay p { font-size: 18px; margin: 0 0 20px; max-width: 820px; }
+  .razorpay b { color: #fff; }
+  .razorpay .cta { margin-top: 8px; }
+  .razorpay .btn { background: transparent; color: var(--dark-text); border-color: #45414f; }
+  .razorpay .btn.primary { background: #e3b3ea; color: #1b1020; border-color: #e3b3ea; }
+
+  footer { color: var(--faint); font-size: 14px; border-top: 1px solid var(--line); margin-top: 56px; padding: 24px 0 40px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="wrap">
+    <span class="name">Digvijay Singh Nayal</span>
+    <nav>
+      <a class="btn ghost-sm" href="assets/Digvijay_AI_PM_Case_Study.pdf" download>PDF</a>
+      <a class="btn primary" href="prototype/">Try the prototype</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Case study · Leveraging AI as a product manager</p>
+    <h1>From a one-line brief to a dev-ready payments feature, with AI working as my product team</h1>
+    <p class="byline"><b>Digvijay Singh Nayal</b> · Product Manager</p>
+    <p class="byline"><b>Context:</b> product assignment set by Zippee, a quick-commerce logistics company for D2C brands · July 2026</p>
+    <p class="lede">The area where I get the most out of AI is <b>turning an ambiguous problem into a build-ready package</b>: research, spec, design system, clickable prototype and a pre-development audit. I don't use AI to write faster. I use it as a team of specialists that I brief, challenge and audit, so my own time goes into the decisions that need judgment.</p>
+    <div class="cta">
+      <a class="btn primary" href="prototype/">Try the clickable prototype →</a>
+      <a class="btn" href="assets/Digvijay_AI_PM_Case_Study.pdf" download>Download the 5-page PDF</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="n">10+</div><p>rider and commerce apps benchmarked (Blinkit, Zepto, Swiggy, Flipkart, BigBasket and more)</p></div>
+      <div class="stat"><div class="n">v4.0</div><p>PRD after four pressure-tested versions; 12 assumptions and 9 decisions logged</p></div>
+      <div class="stat"><div class="n">22</div><p>coded UI components (React + TypeScript), synced into Claude Design</p></div>
+      <div class="stat"><div class="n">39</div><p>issues found by an AI audit of the prototype against the PRD</p></div>
+      <div class="stat"><div class="n">5</div><p>blockers caught <b>before</b> development, incl. a UPI double-collection race</p></div>
+    </div>
+
+    <div class="pair">
+      <div class="card">
+        <h3>The brief</h3>
+        <p>A customer ordered 5 items on cash or pay-on-delivery. At the door they say: <em>"I only want 3."</em> Nothing in the rider app supports this. Design how the rider completes it, and make it <b>ready to move to development</b>.</p>
+      </div>
+      <div class="card">
+        <h3>Why it's hard</h3>
+        <p>It looks like a UI feature, but it's actually a <b>payments and inventory problem</b>: the amount changes seconds before collection, over UPI on patchy 4G, for 150+ brands whose prices and coupons Zippee doesn't own, and every returned item has to make it back to the shelf.</p>
+      </div>
+    </div>
+
+    <h4>What I delivered</h4>
+    <table>
+      <thead><tr><th style="width:28%">Artifact</th><th>What's in it</th></tr></thead>
+      <tbody>
+        <tr><td>UI/UX research doc</td><td data-l="What's in it">Ground truth on Zippee's live rider app (Play Store listing, reviews, June 2026 revamp), rider persona, the full rider journey benchmarked and mapped screen by screen, 8 anti-patterns seen in the field</td></tr>
+        <tr><td>PRD v4.0 (ready for dev)</td><td data-l="What's in it">Doorstep flow S1 to S7, 4 state machines, payment logic with a worked example, 15 edge cases, internal API contracts, guardrails, NFRs, instrumentation, phased launch with kill criteria</td></tr>
+        <tr><td>Design system + component library</td><td data-l="What's in it">Tokens pixel-sampled from the live app, 22 components as code, interaction rules (56 px targets, Hindi-ready, no typeable amount field anywhere)</td></tr>
+        <tr><td>Clickable prototype</td><td data-l="What's in it">Rider flow S1 to S7 plus Home, Success and RTO screens; POD and prepaid variants; geofence scenarios; English with Hindi on the entry screen. <a href="prototype/">Open it</a>.</td></tr>
+        <tr><td>AI-run UAT review</td><td data-l="What's in it">Prototype audited line by line against the PRD: 5 blockers, 7 high, 14 medium, 13 polish items, each with a fix and a gate</td></tr>
+      </tbody>
+    </table>
+  </header>
+
+  <!-- 01 -->
+  <section id="problem">
+    <h2><span class="num">01</span>The problem, and the insight that shaped everything</h2>
+    <p class="sub">Zippee delivers for 150+ D2C brands from ~125 dark stores in 21 cities (public figures). COD dominates. Today every partial rejection turns into a phone call.</p>
+    <table>
+      <thead><tr><th style="width:22%">Who</th><th>What goes wrong today</th></tr></thead>
+      <tbody>
+        <tr><td>Zippee ops</td><td data-l="What goes wrong">Every partial is a 6 to 10 min ops call. Cash collected no longer matches system records, so daily reconciliation breaks. Store stock drifts because returns have no record.</td></tr>
+        <tr><td>Brand</td><td data-l="What goes wrong">Full RTO where a partial could have saved the sale. Website stock goes wrong, which leads to overselling and settlement disputes.</td></tr>
+        <tr><td>Customer</td><td data-l="What goes wrong">Waits while ops improvises, then pays a hand-calculated, unverified amount with no record of what went back.</td></tr>
+        <tr><td>Rider</td><td data-l="What goes wrong">Does mental math on money, gets a salary deduction when it's wrong, and runs late for the rest of the route.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="insight">Nobody renegotiates payment at the door. Blinkit, Zepto and BigBasket route around it with prepaid wallets. Zippee has no wallet (the brand owns the customer), so the only clean path is to <em>collect the exactly-right amount the first time</em>.</p>
+    <p class="note">This insight came out of the AI-assisted benchmark (section 02). It changed the design brief from "build a returns screen" to "build a trustworthy re-pricing and collection system with a returns tail".</p>
+
+    <h4>The solution in one line</h4>
+    <p style="margin:0 0 16px">The rider marks what's being returned, the <b>server</b> recalculates the bill, the <b>customer</b> approves by OTP, the rider collects the <b>exact</b> amount, and every returned item is tracked back to the store.</p>
+    <div class="flow">
+      <div class="step"><span class="k">S1 to S3</span><b>Adjust items</b><p>Quantity per line, reason per return, photos if damage is claimed</p></div>
+      <div class="step"><span class="k">S4</span><b>Server recalculates</b><p>Rider never does math; each revision is frozen for audit</p></div>
+      <div class="step"><span class="k">S5</span><b>Customer OTP</b><p>Message lists kept items and the new amount, so the customer consents, not the rider</p></div>
+      <div class="step"><span class="k">S6</span><b>Collect exact amount</b><p>Amount-locked UPI QR or cash; goods change hands only after PAID</p></div>
+      <div class="step"><span class="k">S7 + store</span><b>Returns to shelf</b><p>Sealed pouch, return task on the route, store scan and QC before restock</p></div>
+    </div>
+
+    <h4>The money math (worked example from the PRD)</h4>
+    <div class="math">
+      <div>
+<pre>ORIGINAL   A ₹500×2   B ₹300×1   C ₹100×2
+           coupon −₹150 · delivery ₹49 · COD ₹25
+           to pay  ₹1,424
+
+RETURNED   1×A and 2×C
+KEPT       A: ₹500 − ₹50 coupon share = ₹450
+           B: ₹300 − ₹30 coupon share = ₹270
+           fees unchanged: ₹49 + ₹25
+           to pay  ₹794</pre>
+        <p class="note">Coupon split uses the platform's own line-level allocation when it's sent (e.g. Shopify), else prorated by line value, rounded to the paisa with the remainder on the highest-value line, so totals always reconcile.</p>
+      </div>
+      <figure style="margin:0">
+        <div class="qr-card" aria-label="Illustration of the amount-locked UPI QR screen">
+          <small>Customer scans &amp; pays exactly</small>
+          <div class="amt">₹794</div>
+          <div class="row">
+            <svg class="qr" viewBox="0 0 21 21" shape-rendering="crispEdges" aria-hidden="true">
+              <path fill="#111" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h1v1H8zM10 0h2v1h-2zM9 2h2v1H9zM8 4h1v2H8zM11 4h2v1h-2zM10 6h1v1h-1zM12 6h1v2h-1zM0 8h2v1H0zM3 8h3v1H3zM8 8h3v1H8zM14 8h2v1h-2zM18 8h3v1h-3zM1 10h2v1H1zM5 10h4v1H5zM10 10h1v2h-1zM13 10h3v1h-3zM17 10h1v1h-1zM19 10h2v2h-2zM0 12h1v1H0zM3 12h2v1H3zM7 12h2v1H7zM12 12h2v1h-2zM15 12h3v1h-3zM8 14h2v1H8zM11 14h1v2h-1zM13 14h2v1h-2zM17 14h4v1h-4zM9 16h1v1H9zM14 16h1v2h-1zM16 16h2v1h-2zM20 16h1v2h-1zM8 18h3v1H8zM12 18h1v1h-1zM17 18h2v1h-2zM9 20h2v1H9zM13 20h3v1h-3zM18 20h1v1h-1z"/>
+            </svg>
+            <div class="ring">
+              <svg viewBox="0 0 36 36" width="58" height="58" aria-hidden="true">
+                <circle cx="18" cy="18" r="15" fill="none" stroke="var(--line)" stroke-width="3"/>
+                <circle cx="18" cy="18" r="15" fill="none" stroke="var(--green)" stroke-width="3" stroke-dasharray="94.2" stroke-dashoffset="14" transform="rotate(-90 18 18)" stroke-linecap="round"/>
+              </svg>
+              <span>4:13</span>
+            </div>
+          </div>
+          <div class="wait">● Waiting for payment of ₹794…</div>
+        </div>
+        <figcaption class="caption">Amount-locked UPI QR with a 5-minute expiry ring, from the coded component library. (Illustrative QR, not scannable.)</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 02 -->
+  <section id="pipeline">
+    <h2><span class="num">02</span>How I used AI: a five-stage pipeline</h2>
+    <p class="sub">Every artifact is the input contract for the next one. AI does the heavy lifting inside each stage, and I own the handoffs between stages.</p>
+    <div class="pipe">
+      <div class="step"><span class="dot">1</span><b>Frame</b><p>AI gets a role (head of product, 20+ yrs in q-commerce supply chain) and a mandate to pressure-test me</p></div>
+      <div class="step"><span class="dot">2</span><b>Research</b><p>Live-app ground truth, rider persona, 10+ app benchmark, evidence mapped to each screen</p></div>
+      <div class="step"><span class="dot">3</span><b>Spec</b><p>PRD drafted, attacked and rewritten across four versions until it was dev-ready</p></div>
+      <div class="step"><span class="dot">4</span><b>Build</b><p>Design tokens, 22 coded components, clickable prototype in Claude Design</p></div>
+      <div class="step"><span class="dot">5</span><b>Audit</b><p>A separate AI pass tests the prototype against the PRD, like UAT before dev</p></div>
+    </div>
+    <div class="loop">Audit findings loop back into the spec and the build. Gates: blockers fixed before dev pickup, high-severity items fixed before rider usability testing.</div>
+
+    <table style="margin-top:28px">
+      <thead><tr><th style="width:14%">Stage</th><th>What AI did</th><th>What I decided</th></tr></thead>
+      <tbody>
+        <tr><td>Research</td><td data-l="What AI did">Read Zippee's Play Store listing and reviews, found the <code>com.zippee.ridercod</code> package ("COD" is in the name), collected field studies on Blinkit and Zepto riders, and pulled patterns from Flipkart Open Box, BigBasket and Uber India</td><td data-l="What I decided">Which lessons transfer and which don't. Zippee ≠ Blinkit: the brand owns the customer, COD dominates, and handover has minutes, not seconds. That gap is the strategic room this feature exploits.</td></tr>
+        <tr><td>Spec</td><td data-l="What AI did">Drafted the PRD, generated edge cases, state machines and APIs, then argued against its own drafts when prompted ("what breaks this?", "what would a CFO reject?")</td><td data-l="What I decided">The logged decisions (section 03), the North Star metric, and what's deliberately out of scope. Every assumption is labelled as one, and demand is marked unproven with a kill switch.</td></tr>
+        <tr><td>Build</td><td data-l="What AI did">Pixel-sampled brand colours from live app assets, wrote tokens and a component library, previewed every component and synced it to Claude Design, then generated the prototype</td><td data-l="What I decided">The non-negotiables: no typeable amount field anywhere, hidden not disabled controls, 56 px touch targets, icon plus vernacular label, amounts in the largest type on screen.</td></tr>
+        <tr><td>Audit</td><td data-l="What AI did">Walked every screen against every PRD rule and found 39 issues, each with a PRD reference and a fix</td><td data-l="What I decided">Severity and sequencing. Which issues are PRD non-compliance (blockers) and which are taste, plus the gate each one has to clear.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="rules">
+      <div class="card">
+        <h4>My operating rules for working with AI</h4>
+        <ol class="nice">
+          <li><b>Give it a role and a sceptic's job,</b> not a writing job. The project brief told AI to pressure-test every assumption with me.</li>
+          <li><b>No claim without a source or an "assumption" label.</b> The PRD opens with 12 explicit assumptions; the research doc cites every benchmark.</li>
+          <li><b>AI drafts, I decide, and the decision is logged</b> with the alternative I rejected and its cost.</li>
+          <li><b>AI checks AI.</b> A fresh pass audits the build against the spec. It caught what the builder pass missed.</li>
+          <li><b>Chain the artifacts.</b> Research → PRD → design system → prototype → UAT. Each is written so the next stage (human or AI) can use it directly.</li>
+        </ol>
+      </div>
+      <figure style="margin:0">
+        <div class="success" aria-label="Illustration of the partial-delivery success screen">
+          <div class="tick">✓</div>
+          <h5>Delivery complete</h5>
+          <ul>
+            <li><i style="background:var(--green-soft);color:var(--green)">✓</i>3 items delivered</li>
+            <li><i style="background:var(--amber-soft);color:var(--amber)">↩</i>2 items in return pouch</li>
+            <li><i style="background:var(--accent-soft);color:var(--accent)">₹</i>₹794 collected (cash)</li>
+          </ul>
+          <div class="earned"><b>₹68 earned</b><p>+ ₹34 when the pouch is scanned at the store</p></div>
+        </div>
+        <figcaption class="caption">Partial-delivery success screen. It shows the pending return fee <em>and</em> its release condition, a lesson from rider distrust of opaque pay at Zepto.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 03 -->
+  <section id="decisions">
+    <h2><span class="num">03</span>Where judgment mattered: decisions I pressure-tested with AI</h2>
+    <p class="sub">AI is good at generating options and attacking them. The call, and owning its trade-off, stays with the PM.</p>
+    <table>
+      <thead><tr><th style="width:17%">Question</th><th style="width:22%">Options on the table</th><th style="width:15%">My call</th><th>Why, and what it costs</th></tr></thead>
+      <tbody>
+        <tr><td>Who calculates the new bill?</td><td data-l="Options">Query each brand's ERP / promo engine at the door, or a Zippee pricing engine using order-time data</td><td data-l="My call"><span class="tag">ZIPPEE ENGINE</span></td><td data-l="Why, and what it costs">150 brands would mean 150 ERP integrations, and the doorstep would inherit their latency and downtime. One deterministic engine responds in milliseconds and covers all brands from day one. <b>Cost:</b> minimum-order coupon rules can't be re-checked after returns; this is disclosed to brands at opt-in.</td></tr>
+        <tr><td>What proves success?</td><td data-l="Options">"Value saved on rejections" vs. revenue realisation rate against matched comparison stores</td><td data-l="My call"><span class="tag">REALISATION RATE</span></td><td data-l="Why, and what it costs">"Value saved" grows when rejections grow, which is Goodhart's law in action. Realisation is self-guarding: saved sales push it up and induced rejections pull it down. It's also what Zippee sells to brands (fewer RTOs, expressed in money).</td></tr>
+        <tr><td>How is the rider paid for the return leg?</td><td data-l="Options">Flat fee per returned unit vs. % of the order's forward payout</td><td data-l="My call"><span class="tag">50% OF FORWARD</span></td><td data-l="Why, and what it costs">A flat per-unit fee inverts on cheap items and rewards returns. The fee is released only when the store verifies the returns, so there is never a clawback on unverified goods.</td></tr>
+        <tr><td>Can money move backwards at the door?</td><td data-l="Options">Allow refunds and adjustments, or never</td><td data-l="My call"><span class="tag">NEVER</span></td><td data-l="Why, and what it costs">No refunds or bill edits at the door, payment only after OTP, and the server is the only calculator. Prepaid refunds always go through the brand. Normal change for cash is unaffected.</td></tr>
+        <tr><td>What ships first?</td><td data-l="Options">Everything at once, or split money (M1) from goods (M2)</td><td data-l="My call"><span class="tag">M1 FIRST</span></td><td data-l="Why, and what it costs">M1 is pure software where the daily loss is. M2 is a process change across ~125 stores. Demand is unproven, so Phase 0 measures it: under 2% of POD orders means we stop after M1.</td></tr>
+        <tr><td>Approval calls to ops?</td><td data-l="Options">Keep ops sign-off per partial, or rider self-serve with controls</td><td data-l="My call"><span class="tag">SELF-SERVE</span></td><td data-l="Why, and what it costs">The feature exists to kill the ops call. OTP, photos, geofence tiers, audit thresholds and trend-based auto-pause replace human sign-off.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>How success is measured</h4>
+        <p style="font-size:15px"><b>North Star:</b> revenue realisation rate (delivered and paid merchandise ÷ dispatched), pilot stores vs. matched comparison stores.</p>
+        <ul class="bul">
+          <li><b>Adoption:</b> ≥95% of doorstep rejections resolved in-app with no ops call</li>
+          <li><b>Money integrity:</b> &lt;0.5% of partial orders fail to reconcile</li>
+          <li><b>Stock integrity:</b> ≥99% of returned units scanned back within 24 h</li>
+          <li><b>Early warning:</b> item-rejection rate ≤1.25× comparison stores; auto-pause above 1.5× for 2 weeks</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Phased launch with kill criteria</h4>
+        <ul class="bul">
+          <li><b>Phase 0 (2 wks):</b> ops tags every partial call; a 12-rider usability test. Gate: addressable volume ≥2% of POD orders, or shelve.</li>
+          <li><b>Phase 1 pilot, M1 (4 wks):</b> 3 stores + 3 comparison stores, 5 brands. Gate: realisation beats comparison with statistical confidence.</li>
+          <li><b>Phase 2, M2 + scale:</b> return scanning and dock QC network-wide.</li>
+          <li><b>Phase 3:</b> all brands by opt-in addendum.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 -->
+  <section id="audit">
+    <h2><span class="num">04</span>AI as a pre-development QA team: what the audit caught</h2>
+    <p class="sub">The prototype looked finished. A separate AI pass, told to test it only against the PRD, found 39 issues. These are the five blockers, plus one design-system trap, that would otherwise have reached development.</p>
+    <table>
+      <thead><tr><th style="width:9%">Sev.</th><th style="width:36%">What the audit found</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sev">B1</span></td><td data-l="What the audit found">An expired UPI QR unlocked the cash button instantly, skipping the "PSP confirms not paid" check</td><td data-l="Why it matters">A customer who pays at second 299 with a slow webhook gets charged twice. <b>Fix:</b> run the same PSP check the void flow already uses.</td></tr>
+        <tr><td><span class="sev">B4</span></td><td data-l="What the audit found">OTP "attempts left" reached 0, but the field kept accepting guesses</td><td data-l="Why it matters">Consent could be brute-forced. <b>Fix:</b> lock after 5 attempts, force the voice OTP or signature path, and log it.</td></tr>
+        <tr><td><span class="sev">B5</span></td><td data-l="What the audit found">The 2-minute payment-verification timer hit 0:00 with no end state</td><td data-l="Why it matters">The rider is stranded at the door. <b>Fix:</b> a decision sheet with two exits: void the QR and collect cash, or convert to full RTO.</td></tr>
+        <tr><td><span class="sev">B2·B3</span></td><td data-l="What the audit found">Perishable lock and bundle auto-return existed in components but were never wired into the flow</td><td data-l="Why it matters">These are the most brand-risky rules, and they were invisible. Fixing them was wiring, not design work.</td></tr>
+        <tr><td><span class="sev h">H4</span></td><td data-l="What the audit found">The design system's default return reasons included "Too expensive"</td><td data-l="Why it matters">That default invites price negotiation at the door. <b>Fix:</b> correct it in the design system itself, so no future screen inherits it.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>Payment safety designed in from the start</h4>
+        <ul class="bul">
+          <li><b>Amount-locked dynamic UPI QR,</b> tagged with order + revision ID; one live QR at a time, maximum 3 regenerations</li>
+          <li><b>Cash disabled while a QR is live;</b> a late UPI after cash is auto-detected and refunded</li>
+          <li><b>Idempotency key</b> (order + revision + step) on every money call; PSP callbacks deduplicated</li>
+          <li><b>Frozen calculation per revision</b> (inputs, rule version, outputs) as the dispute record</li>
+          <li><b>Collect before handover;</b> daily PSP ↔ ledger reconciliation, and anything unmatched becomes a ticket within 48 h</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Impact, stated honestly</h4>
+        <p style="font-size:15px;margin:0">This was an assignment, so there's no production data. What I can measure is the process:</p>
+        <ul class="bul">
+          <li>One PM produced a research-backed, dev-ready package that normally needs a PM, a researcher, a designer and a QA pass</li>
+          <li>Coded component library scaffolded, previewed and synced to Claude Design in <b>under an hour</b> (per git history)</li>
+          <li><b>5 blockers + 7 high-severity issues</b> were found before any engineering time was spent</li>
+          <li>Outcome metrics, guardrails and kill criteria were defined <b>before</b> the build, not after</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card learned" style="margin-top:16px">
+      <h4>What I've learned about leveraging AI as a PM</h4>
+      <ul class="bul">
+        <li><b>The leverage is in the chain, not the prompt.</b> A research doc written so a PRD can cite it, and a PRD written so a prototype and an audit can be checked against it, compounds far more than any single clever prompt.</li>
+        <li><b>AI is confident about happy paths and blind to its own gaps</b> unless a second pass is asked to audit against a spec. Treat it like a team: builder and reviewer are different roles.</li>
+        <li><b>My time moved from producing documents to making calls.</b> Pricing ownership, metric design, rider pay, sequencing and kill criteria are where the PM adds value.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="razorpay" id="razorpay">
+    <p class="eyebrow">Why this is relevant to Razorpay</p>
+    <p>The hardest part of this feature turned out to be a payments problem: collecting an amount that changed seconds earlier, over UPI, on a weak network, without double collection, and reconciling it cleanly for 150+ merchants. That's the kind of problem I want to keep working on, and the way I'd work on it is the one shown here: <b>AI for breadth and speed, a PM for judgment and accountability.</b></p>
+    <div class="cta">
+      <a class="btn primary" href="prototype/">Try the prototype →</a>
+      <a class="btn" href="assets/Digvijay_AI_PM_Case_Study.pdf" download>Download the PDF</a>
+    </div>
+    <p class="note" style="color:#a9a4b4;font-size:14px;margin:16px 0 0">The prototype opens in any browser. Best viewed on a phone or in a narrow window. Demo data only.</p>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Digvijay Singh Nayal · AI-native PM case study</span>
+    <a href="mailto:digvijaynayal499@gmail.com">digvijaynayal499@gmail.com</a>
+  </div>
+</footer>
+
+</body>
+</html>
