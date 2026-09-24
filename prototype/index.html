@@ -617,6 +617,19 @@ class Component extends DCLogic {
     { id: 'c', name: 'Aloe Lip Balm', emoji: '💄', price: 100, qty: 2 },
   ];
   PHOTO_REASONS = ['wrong-item', 'damaged', 'expired'];
+  COUPON = 150;
+
+  // PRD §5: order coupon prorated by line value, rounded to the paisa, remainder on the highest-value line.
+  // Returns the coupon share per unit for each item (A ₹50, B ₹30, C ₹10 for this basket).
+  unitShares() {
+    if (this._shares) return this._shares;
+    const total = this.ITEMS.reduce((a, it) => a + it.price * it.qty, 0);
+    const paise = this.ITEMS.map(it => Math.round(this.COUPON * 100 * it.price * it.qty / total));
+    const top = this.ITEMS.reduce((bi, it, i, arr) => it.price * it.qty > arr[bi].price * arr[bi].qty ? i : bi, 0);
+    paise[top] += this.COUPON * 100 - paise.reduce((a, v) => a + v, 0);
+    const out = {}; this.ITEMS.forEach((it, i) => { out[it.id] = paise[i] / 100 / it.qty; });
+    return (this._shares = out);
+  }
 
   state = {
     screen: 'home', orderType: 'pod',
@@ -713,7 +726,9 @@ class Component extends DCLogic {
     const lines = this.ITEMS.map((it, i) => {
       const kept = s.counts[it.id] ?? it.qty;
       const returned = it.qty - kept;
-      return { ...it, seq: i + 1, kept, returned, net: it.price * kept, retNet: it.price * returned };
+      const share = this.unitShares()[it.id];
+      const unitNet = it.price - share;
+      return { ...it, seq: i + 1, kept, returned, share, unitNet, net: unitNet * kept, retNet: unitNet * returned };
     });
     const keptCount = lines.reduce((a, l) => a + l.kept, 0);
     const retCount = lines.reduce((a, l) => a + l.returned, 0);
@@ -807,10 +822,10 @@ class Component extends DCLogic {
     const payableStr = this.fmt(tot.payable);
     const refundStr = this.fmt(tot.refund);
     const keptSummary = hi ? (tot.keptCount + ' rakhe items') : (tot.keptCount + ' kept item' + (tot.keptCount === 1 ? '' : 's'));
-    const returnFee = pod ? 29 : 26;
+    const returnFee = pod ? 34 : 26;
     const REASONS = this.reasonList(hi);
-    const podOriginalStr = '₹1,574';
-    const prepaidPaidStr = '₹1,549';
+    const podOriginalStr = '₹1,424';
+    const prepaidPaidStr = '₹1,399';
 
     // ---- static string table ----
     const EN = {
@@ -984,6 +999,7 @@ class Component extends DCLogic {
     // ---- S1 order rows (sequenced, no coupon) ----
     const s1Rows = [
       ...this.ITEMS.map((it, i) => ({ l: (i + 1) + ' · ' + it.emoji + ' ' + it.name + ' ×' + it.qty, v: this.fmt(it.price * it.qty) })),
+      { l: hi ? 'Coupon (brand ka discount)' : 'Coupon (brand discount)', v: '−' + this.fmt(this.COUPON) },
       { l: pod ? 'Delivery ₹49 + COD ₹25' : (hi ? 'Delivery fee' : 'Delivery fee'), v: this.fmt(pod ? 74 : 49) },
     ];
 
@@ -1060,9 +1076,12 @@ class Component extends DCLogic {
 
     // ---- S4 rows (price × qty, no allocations) ----
     const eachStr = (p) => hi ? (this.fmt(p) + ' har ek') : (this.fmt(p) + ' each');
+    const netEachStr = (l) => hi
+      ? (this.fmt(l.price) + ' − ' + this.fmt(l.share) + ' coupon share = ' + this.fmt(l.unitNet) + ' har ek')
+      : (this.fmt(l.price) + ' − ' + this.fmt(l.share) + ' coupon share = ' + this.fmt(l.unitNet) + ' each');
     const keptRows = tot.lines.filter(l => l.kept > 0).map(l => ({
       name: l.seq + ' · ' + l.name,
-      qtyStr: hi ? (l.qty + ' mein se ' + l.kept + ' rakha · ' + eachStr(l.price)) : ('kept ' + l.kept + ' of ' + l.qty + ' · ' + eachStr(l.price)),
+      qtyStr: hi ? (l.qty + ' mein se ' + l.kept + ' rakha · ' + netEachStr(l)) : ('kept ' + l.kept + ' of ' + l.qty + ' · ' + netEachStr(l)),
       net: this.fmt(l.net),
     }));
     const returnRows = tot.lines.filter(l => l.returned > 0).map(l => ({
@@ -1072,19 +1091,19 @@ class Component extends DCLogic {
       amt: pod ? '₹0' : this.fmt(l.retNet),
     }));
     const amountHeroProps = pod
-      ? { amount: tot.payable, oldAmount: 1574, label: hi ? 'Customer dega' : 'Customer pays', onSeeCalculation: () => this.setState({ showBreakdown: true }) }
+      ? { amount: tot.payable, oldAmount: 1424, label: hi ? 'Customer dega' : 'Customer pays', onSeeCalculation: () => this.setState({ showBreakdown: true }) }
       : { amount: tot.refund, label: hi ? 'GlowKart refund karega' : 'GlowKart refunds', onSeeCalculation: () => this.setState({ showBreakdown: true }) };
     const revLabel = 'rev_0' + Math.max(1, s.revision);
 
     // ---- breakdown rows ----
     const breakdownRows = [
       ...tot.lines.filter(l => l.kept > 0).map(l => ({
-        l: l.seq + ' · ' + l.name + ' ×' + l.kept + (hi ? ' rakha' : ' kept'), sub: eachStr(l.price),
+        l: l.seq + ' · ' + l.name + ' ×' + l.kept + (hi ? ' rakha' : ' kept'), sub: netEachStr(l),
         v: this.fmt(l.net), c: 'var(--ink-900)', d: 'none',
       })),
       ...tot.lines.filter(l => l.returned > 0).map(l => ({
         l: l.seq + ' · ' + l.name + ' ×' + l.returned + (hi ? ' wapas' : ' returned'),
-        sub: pod ? (hi ? 'Saket store wapas jayega' : 'goes back to Saket store') : (hi ? 'GlowKart refund karega' : 'refunded by GlowKart'),
+        sub: pod ? (hi ? 'Saket store wapas jayega' : 'goes back to Saket store') : (hi ? ('GlowKart refund karega · ' + netEachStr(l)) : ('refunded by GlowKart · ' + netEachStr(l))),
         v: pod ? '₹0' : this.fmt(l.retNet), c: 'var(--ink-400)', d: pod ? 'line-through' : 'none',
       })),
       ...(pod ? [
@@ -1227,7 +1246,7 @@ class Component extends DCLogic {
     ];
     const successProps = {
       title: hi ? 'Partial delivery poori hui' : 'Partial delivery complete', stats: successStats,
-      earnedNow: pod ? 58 : 52, pendingAmount: returnFee,
+      earnedNow: pod ? 68 : 52, pendingAmount: returnFee,
       pendingCondition: hi ? 'aur jab Saket store return receipt confirm kare' : 'more when Saket store confirms the return receipt',
     };
     const successFooter = hi
@@ -1298,9 +1317,9 @@ class Component extends DCLogic {
       showPodTask, showPrepaidTask, showReturnTask,
       podTaskProps: {
         variant: 'delivery',
-        title: hi ? '5 items deliver karein · ₹1,574 collect karein' : 'Deliver 5 items · collect ₹1,574',
+        title: hi ? '5 items deliver karein · ₹1,424 collect karein' : 'Deliver 5 items · collect ₹1,424',
         address: 'Ananya Sharma · A-14 Green Park Extn',
-        distance: '2.4 km', payout: 58, onClick: () => this.setState({ orderType: 'pod', screen: 's1' }),
+        distance: '2.4 km', payout: 68, onClick: () => this.setState({ orderType: 'pod', screen: 's1' }),
       },
       prepaidTaskProps: {
         variant: 'delivery',
